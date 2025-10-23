@@ -1,0 +1,114 @@
+rules:
+  - id: vsix-code-obfuscation
+    message: Detected code obfuscation in VS Code extension - potential malicious intent
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    patterns:
+      - pattern-either:
+          - pattern: |
+              eval($CODE)
+          - pattern: |
+              new Function($CODE)
+          - pattern: |
+              Buffer.from($DATA, 'base64').toString()
+          - pattern: |
+              atob($DATA)
+          - pattern: |
+              btoa($DATA)
+          - pattern: |
+              $VAR[$HEX]
+    pattern-where-python: |
+      # Check for hex-encoded strings or suspicious patterns
+      import re
+      code = vars.get('$CODE', '') or vars.get('$DATA', '') or vars.get('$HEX', '')
+      hex_pattern = re.compile(r'\\x[0-9a-fA-F]{2}')
+      return len(hex_pattern.findall(str(code))) > 5
+    metadata:
+      category: obfuscation
+      confidence: HIGH
+      impact: HIGH
+      references:
+        - "https://owasp.org/www-community/attacks/Code_Injection"
+      cwe:
+        - "CWE-94: Code Injection"
+      technology:
+        - vscode
+        - extensions
+
+  - id: vsix-dynamic-import
+    message: Detected dynamic import in VS Code extension - potential code injection
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    patterns:
+      - pattern-either:
+          - pattern: |
+              require($DYNAMIC_PATH)
+          - pattern: |
+              import($DYNAMIC_PATH)
+          - pattern: |
+              __webpack_require__($ID)
+    pattern-not:
+      - pattern: |
+          require('./...')
+      - pattern: |
+          require("./...")
+      - pattern: |
+          import('./...')
+      - pattern: |
+          import("./...")
+    metadata:
+      category: malware_pattern
+      confidence: MEDIUM
+      impact: MEDIUM
+      references:
+        - "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import"
+      cwe:
+        - "CWE-94: Code Injection"
+      technology:
+        - vscode
+        - extensions
+
+  - id: vsix-suspicious-extension-metadata
+    message: Detected suspicious extension metadata patterns
+    severity: WARNING
+    languages:
+      - json
+    paths:
+      include:
+        - "*/package.json"
+        - "*/extension.vsixmanifest"
+    patterns:
+      - pattern-either:
+          - pattern: |
+              {
+                ...,
+                "activationEvents": ["*"],
+                ...
+              }
+          - pattern: |
+              {
+                ...,
+                "main": "$PATH",
+                ...
+              }
+    pattern-where-python: |
+      # Check for suspicious activation patterns or obfuscated main files
+      import re
+      path = vars.get('$PATH', '')
+      suspicious_patterns = ['eval', 'base64', '\\x', 'node_modules', '../']
+      return any(pattern in str(path).lower() for pattern in suspicious_patterns)
+    metadata:
+      category: supply_chain_risk
+      confidence: MEDIUM
+      impact: MEDIUM
+      references:
+        - "https://code.visualstudio.com/api/references/extension-manifest"
+      cwe:
+        - "CWE-506: Embedded Malicious Code"
+      technology:
+        - vscode
+        - extensions

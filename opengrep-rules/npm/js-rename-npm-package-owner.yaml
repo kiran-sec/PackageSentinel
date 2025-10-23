@@ -1,0 +1,30 @@
+rules:
+  - id: js-rename-npm-package-owner
+    options:
+      symbolic_propagation: true
+    patterns:
+    #Display the npm username of the currently logged-in user.
+    - pattern: |
+                exec('npm whoami',function(err, stdout, stderr) {...})
+                ...
+     #Replacing onwer details
+    - pattern: ...exec('npm owner add ',...)
+
+    - pattern: ...cheerio.load(body)('.collaborated - packages a ').map(...).get()
+
+    message: Detected code that adds owner of the malicious package as an owner to all packages owned by the user who performed npm install command.
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      references:
+        - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/npm/shrugging-logging
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-attack-examples:
+        - https://github.com/advisories/GHSA-qv78-398w-cxp7
+      endor-category: malware-detection
+      endor-tags:
+        - ANALYTICS_INFO
+    languages:
+      - js
+    severity: WARNING

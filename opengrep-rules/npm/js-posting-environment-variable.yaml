@@ -1,0 +1,19 @@
+rules:
+- id: js-posting-environment-variable
+  mode: taint
+  pattern-sources:
+    - pattern: process.env
+  pattern-sinks:
+    - pattern: querystring.stringify(...)
+  message: "crossenv malware pattern observed in the npm registry"
+  languages:
+    - js
+  metadata:
+    version: latest
+    endor-targets: [ ENDOR_TARGET_PACKAGE ]
+    endor-category: malware-detection
+    endor-attack-examples:
+    - https://blog.npmjs.org/post/163723642530/crossenv-malware-on-the-npm-registry
+    - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/npm/http-proxy.js/0.11.3
+    confidence: LOW
+  severity: INFO

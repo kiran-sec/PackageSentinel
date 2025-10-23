@@ -1,0 +1,70 @@
+rules:
+  - id: js-file-operations-suspicious
+    patterns:
+      - pattern-either:
+        # File operations on sensitive paths
+        - pattern: |
+            fs.readFile($PATH, ...)
+        - pattern: |
+            fs.readFileSync($PATH, ...)
+        - pattern: |
+            fs.writeFile($PATH, ...)
+        - pattern: |
+            fs.writeFileSync($PATH, ...)
+        - pattern: |
+            fs.appendFile($PATH, ...)
+        - pattern: |
+            fs.appendFileSync($PATH, ...)
+        - pattern: |
+            fs.copyFile($SRC, $PATH, ...)
+        - pattern: |
+            fs.copyFileSync($SRC, $PATH, ...)
+        # Process execution
+        - pattern: |
+            child_process.exec($CMD, ...)
+        - pattern: |
+            child_process.execSync($CMD, ...)
+        - pattern: |
+            child_process.spawn($CMD, ...)
+        - pattern: |
+            child_process.spawnSync($CMD, ...)
+        # Environment variable access
+        - pattern: |
+            process.env[$ENVVAR]
+        # Home directory access
+        - pattern: |
+            os.homedir()
+        - pattern: |
+            path.join(os.homedir(), ...)
+      - metavariable-regex:
+          # Sensitive file paths
+          regex: (?i).*(etc/passwd|etc/shadow|\.ssh|\.aws|\.config|\.bashrc|\.zshrc|\.profile|windows/system32|program files|appdata|documents and settings).*
+          metavariable: $PATH
+      - metavariable-regex:
+          # Sensitive source paths
+          regex: (?i).*(etc/passwd|etc/shadow|\.ssh|\.aws|\.config|\.bashrc|\.zshrc|\.profile|windows/system32|program files|appdata|documents and settings).*
+          metavariable: $SRC
+      - metavariable-regex:
+          # Dangerous commands
+          regex: (?i).*(rm\s+-rf|del\s+/s|format|fdisk|chmod\s+777|sudo|su\s+root|net\s+user|reg\s+add|powershell|cmd\.exe).*
+          metavariable: $CMD
+      - metavariable-regex:
+          # Sensitive environment variables
+          regex: (?i).*(password|token|secret|key|api_key|private_key|aws_access|github_token|ssh_key).*
+          metavariable: $ENVVAR
+    message: Suspicious file system operation detected - accessing sensitive paths or executing dangerous commands
+    languages:
+      - javascript
+      - typescript
+    severity: ERROR
+    metadata:
+      version: latest
+      endor-category: malware-detection
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      confidence: HIGH
+      malware-type: file-operations
+      attack-vector: system-access
+      cwe: "CWE-78: OS Command Injection"
+      references:
+        - "https://attack.mitre.org/techniques/T1005/"
+        - "https://attack.mitre.org/techniques/T1083/"

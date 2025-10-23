@@ -1,0 +1,116 @@
+# PackageSentinel - Static Analysis Project
+# Generated files and directories to ignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Analysis outputs (keep structure but ignore specific runs)
+analysis_output/*.json
+package_analysis.log
+*.log
+
+# Temporary test files
+/tmp/
+temp/
+*.tmp
+
+# Cache directories
+cache/npm_popular_packages.json
+cache/pypi_popular_packages.json
+
+# Node modules (if any)
+node_modules/
+package-lock.json
+
+# Downloaded packages for testing
+downloaded_packages/
+test_packages/
+
+# Malware samples (keep structure but ignore large packages)
+malware-samples/**/*.exe
+malware-samples/**/*.dll
+malware-samples/**/*.bin
+malware-samples/**/*.vsix
+malware-samples/**/*.tgz
+malware-samples/**/*.tar.gz
+
+# Exclude large legitimate packages used for testing
+malware-samples/npm/lodash_*/
+malware-samples/npm/uuid_*/
+malware-samples/pypi/requests_*/
+malware-samples/pypi/uuid_*/
+
+# Allow specific demo samples for typosquatting
+!malware-samples/npm/typosquat_*/
+!malware-samples/pypi/typosquat_*/
+!malware-samples/npm/cryptojacker_*/
+!malware-samples/npm/supply_chain_*/
+!malware-samples/npm/backdoor_*/
+!malware-samples/npm/binary_dropper_*/
+!malware-samples/pypi/credential_*/
+!malware-samples/pypi/data_exfiltrator_*/
+
+# Sensitive files
+.env
+*.key
+*.pem
+config.local.yaml
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation builds
+docs/_build/
+
+# Other projects (hackathon, etc.)
+others/

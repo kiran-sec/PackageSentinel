@@ -1,0 +1,84 @@
+rules:
+- id: npm-dll-hijacking
+  languages:
+  - javascript
+  message: This package manipulates a trusted application into loading a malicious
+    DLL
+  metadata:
+    confidence: MEDIUM
+    description: Identifies when a malicious package manipulates a trusted application
+      into loading a malicious DLL
+    endor-category: malware-detection
+    endor-tags:
+    - ANALYTICS_INFO
+    endor-targets:
+    - ENDOR_TARGET_PACKAGE
+    version: latest
+  pattern-either:
+  - pattern-either:
+    - patterns:
+      - pattern: $DLL_LOAD
+      - metavariable-pattern:
+          metavariable: $DLL_LOAD
+          pattern-either:
+          - pattern-regex: (?i).*?\.exe\s+.*?\.dll
+          - pattern-regex: (?i).*?\/bin/.+\s+.*?\.so
+          - pattern-regex: LD_PRELOAD
+          - pattern-regex: (?i)control(.exe)?\s+\S+.cpl
+          - pattern-regex: (?i)cmstp(.exe)?\s+\S+
+          - pattern-regex: (?i)InstallUtil(.exe)?\s+\S+
+          - pattern-regex: (?i)mshta(.exe)?\s+\S+
+          - pattern-regex: (?i)msiexec(.exe)?\s+\S+
+          - pattern-regex: (?i)odbcconf(.exe)?\s+.*{\s*REGSVR\s+\S+\s*}
+          - pattern-regex: (?i)regsvcs(.exe)?\s+\S+
+          - pattern-regex: (?i)regasm(.exe)?\s+\S+
+          - pattern-regex: (?i)regsvr32(.exe)?\s+\S+
+          - pattern-regex: (?i)rundll32(.exe)?\s+\S+
+          - pattern-regex: (?i)verclsid(.exe)?\s+.*{\s*\S+\s*}
+          - pattern-regex: (?i)mavinject(.exe)?\s+\d+\s+/INJECTRUNNING\s+\S+
+          - pattern-regex: (?i)mmc(.exe)?\s+-Embedding\s+\S+.ms
+    - patterns:
+      - pattern: $FN($EXE,...,$DLL)
+      - metavariable-pattern:
+          metavariable: $EXE
+          patterns:
+          - pattern: '...'
+          - pattern-regex: (?i).*?(\.exe|\/bin/.+)
+      - metavariable-pattern:
+          metavariable: $DLL
+          patterns:
+          - pattern: '...'
+          - pattern-regex: (?i).*?\.(dll|so)
+  - pattern-either:
+    - pattern: '....WriteProcessMemory'
+    - pattern: '....CreateRemoteThread'
+    - pattern: '....LoadLibraryA'
+  - patterns:
+    - patterns:
+      - pattern: '...
+
+          $WRITE(...,$DLL,...)
+
+          ...
+
+          $FN(...,$EXE,...)
+
+          '
+      - metavariable-pattern:
+          metavariable: $WRITE
+          pattern-either:
+          - pattern: '....writeFileSync'
+          - pattern: '....writeFile'
+          - pattern: '....appendFile'
+      - metavariable-pattern:
+          metavariable: $EXE
+          patterns:
+          - pattern: '...'
+          - pattern-regex: (?i).*?(\.exe|\/bin/.+)
+      - metavariable-pattern:
+          metavariable: $DLL
+          patterns:
+          - pattern: '...'
+          - pattern-regex: (?i)\.(dll|so)
+      - focus-metavariable: $DLL
+  severity: WARNING

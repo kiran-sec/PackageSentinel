@@ -1,0 +1,308 @@
+rules:
+  - id: pypi-ml-model-poisoning
+    patterns:
+      - pattern-either:
+          # Pickle deserialization (dangerous)
+          - pattern: |
+              import pickle
+          - pattern: |
+              pickle.load($FILE)
+          - pattern: |
+              pickle.loads($DATA)
+          # Joblib model loading
+          - pattern: |
+              import joblib
+          - pattern: |
+              joblib.load($MODEL_FILE)
+          # PyTorch model loading
+          - pattern: |
+              torch.load($MODEL_FILE)
+          - pattern: |
+              torch.load($MODEL_FILE, map_location='cpu')
+          # TensorFlow SavedModel loading
+          - pattern: |
+              tf.saved_model.load($MODEL_PATH)
+          - pattern: |
+              tf.keras.models.load_model($MODEL_PATH)
+          # Suspicious model URLs
+          - patterns:
+              - pattern: |
+                  urllib.request.urlretrieve($URL, $LOCAL_FILE)
+              - metavariable-regex:
+                  metavariable: $URL
+                  regex: (?i).*(model|weights|checkpoint|\.pkl|\.joblib|\.pt|\.pth|\.h5).*
+    message: ML model loading detected - potential model poisoning or deserialization attack
+    languages: [python]
+    severity: WARNING
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      description: "Detects machine learning model loading patterns that may indicate model poisoning attacks, malicious pickle deserialization, or compromised pre-trained models. These attacks can lead to arbitrary code execution during model loading, data poisoning, or backdoor insertion in ML applications. This rule specifically targets Python environments and PyPI packages."
+      attack_vectors:
+        - "Pickle deserialization attacks"
+        - "Model poisoning"
+        - "Backdoor insertion"
+        - "Malicious model distribution"
+      references:
+        - "https://attack.mitre.org/techniques/T1203/"
+        - "https://blog.trailofbits.com/2021/03/15/never-a-dill-moment-exploiting-machine-learning-pickle-files/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Pickle deserialization attacks"
+        - "Model poisoning"
+
+  - id: pypi-jupyter-exploitation
+    patterns:
+      - pattern-either:
+          # Jupyter notebook execution
+          - pattern: |
+              import nbformat
+          - pattern: |
+              from nbformat import v4 as nbf
+          - pattern: |
+              nbformat.write($NB, $FILE)
+          # IPython execution
+          - pattern: |
+              from IPython import get_ipython
+          - pattern: |
+              get_ipython().run_cell($CODE)
+          - pattern: |
+              get_ipython().magic($MAGIC)
+          # Notebook server manipulation
+          - pattern: |
+              from notebook import notebookapp
+          - pattern: |
+              from jupyter_server import serverapp
+          # Kernel manipulation
+          - pattern: |
+              from ipykernel import kernelapp
+          - pattern: |
+              kernelapp.launch_new_instance()
+    message: Jupyter/IPython exploitation detected - potential notebook manipulation
+    languages: [python]
+    severity: WARNING
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      description: "Detects Jupyter notebook and IPython exploitation patterns that may manipulate notebook execution environments, inject malicious cells, or compromise Jupyter server instances. These attacks can lead to arbitrary code execution in notebook environments, data theft from research environments, or persistence in data science workflows. This rule specifically targets Python environments and PyPI packages."
+      attack_vectors:
+        - "Notebook cell injection"
+        - "IPython magic abuse"
+        - "Jupyter server compromise"
+        - "Kernel manipulation"
+      references:
+        - "https://attack.mitre.org/techniques/T1059/"
+        - "https://attack.mitre.org/techniques/T1055/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Notebook cell injection"
+        - "IPython magic abuse"
+
+  - id: pypi-docker-escape
+    patterns:
+      - pattern-either:
+          # Docker socket access
+          - pattern: |
+              import docker
+          - pattern: |
+              docker.from_env()
+          - pattern: |
+              docker.DockerClient(base_url='unix://var/run/docker.sock')
+          # Container escape techniques
+          - pattern: |
+              os.system("docker run --privileged")
+          - pattern: |
+              subprocess.call(["docker", "run", "--pid=host"])
+          - pattern: |
+              subprocess.call(["docker", "run", "--net=host"])
+          # Host filesystem access
+          - pattern: |
+              open("/proc/self/cgroup", "r")
+          - pattern: |
+              os.path.exists("/.dockerenv")
+          # Namespace manipulation
+          - pattern: |
+              import ctypes.util
+          - pattern: |
+              ctypes.CDLL("libc.so.6").unshare($CLONE_FLAGS)
+    message: Docker container escape attempt detected - potential privilege escalation
+    languages: [python]
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: HIGH
+      description: "Detects Docker container escape techniques including Docker socket access, privileged container execution, host filesystem access, and namespace manipulation. These patterns may indicate attempts to break out of container isolation, gain access to the host system, or escalate privileges beyond container boundaries. This rule specifically targets Python environments and PyPI packages."
+      attack_vectors:
+        - "Docker socket exploitation"
+        - "Privileged container escape"
+        - "Host filesystem access"
+        - "Namespace manipulation"
+      references:
+        - "https://attack.mitre.org/techniques/T1611/"
+        - "https://attack.mitre.org/techniques/T1548/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Docker socket exploitation"
+        - "Privileged container escape"
+
+  - id: pypi-database-exploitation
+    patterns:
+      - pattern-either:
+          # SQL injection patterns
+          - pattern: |
+              cursor.execute($QUERY % $USER_INPUT)
+          - pattern: |
+              cursor.execute($QUERY + $USER_INPUT)
+          - pattern: |
+              cursor.execute(f"SELECT * FROM users WHERE id = {$USER_INPUT}")
+          # Database credential extraction
+          - pattern: |
+              import sqlite3
+          - pattern: |
+              sqlite3.connect($DB_PATH)
+          - pattern: |
+              conn.execute("SELECT * FROM sqlite_master")
+          # NoSQL injection
+          - pattern: |
+              collection.find({"$where": $JS_CODE})
+          - pattern: |
+              collection.find(eval($USER_INPUT))
+          # Database dump operations
+          - pattern: |
+              mysqldump_cmd = f"mysqldump -u {$USER} -p{$PASS} {$DB}"
+          - pattern: |
+              pg_dump_cmd = f"pg_dump -U {$USER} {$DB}"
+    message: Database exploitation detected - potential data theft or injection
+    languages: [python]
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: HIGH
+      description: "Detects database exploitation patterns including SQL injection, database credential extraction, NoSQL injection, and database dump operations. These patterns may indicate attempts to extract sensitive data, bypass authentication, or compromise database integrity through injection attacks or unauthorized access. This rule specifically targets Python environments and PyPI packages."
+      attack_vectors:
+        - "SQL injection attacks"
+        - "Database credential theft"
+        - "NoSQL injection"
+        - "Database dump operations"
+      references:
+        - "https://attack.mitre.org/techniques/T1190/"
+        - "https://attack.mitre.org/techniques/T1005/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "SQL injection attacks"
+        - "Database credential theft"
+
+  - id: pypi-cloud-credential-theft
+    patterns:
+      - pattern-either:
+          # AWS credential access
+          - pattern: |
+              open(os.path.expanduser("~/.aws/credentials"))
+          - pattern: |
+              os.environ.get("AWS_ACCESS_KEY_ID")
+          - pattern: |
+              os.environ.get("AWS_SECRET_ACCESS_KEY")
+          # Google Cloud credentials
+          - pattern: |
+              os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+          - pattern: |
+              open(os.path.expanduser("~/.config/gcloud/credentials.db"))
+          # Azure credentials
+          - pattern: |
+              os.environ.get("AZURE_CLIENT_ID")
+          - pattern: |
+              open(os.path.expanduser("~/.azure/accessTokens.json"))
+          # Kubernetes credentials
+          - pattern: |
+              open(os.path.expanduser("~/.kube/config"))
+          - pattern: |
+              os.environ.get("KUBECONFIG")
+          # Docker credentials
+          - pattern: |
+              open(os.path.expanduser("~/.docker/config.json"))
+          # Credential transmission
+          - patterns:
+              - pattern: |
+                  $CREDS = open($CRED_FILE).read()
+              - pattern: |
+                  requests.post($URL, data=$CREDS)
+    message: Cloud credential theft detected - potential cloud infrastructure compromise
+    languages: [python]
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: HIGH
+      description: "Detects cloud credential theft patterns including access to AWS, Google Cloud, Azure, Kubernetes, and Docker configuration files, environment variable harvesting, and credential transmission. These attacks target cloud infrastructure credentials to gain unauthorized access to cloud resources, data, and services. This rule specifically targets Python environments and PyPI packages."
+      attack_vectors:
+        - "AWS credential harvesting"
+        - "Google Cloud credential theft"
+        - "Azure credential extraction"
+        - "Kubernetes config access"
+      references:
+        - "https://attack.mitre.org/techniques/T1552/"
+        - "https://attack.mitre.org/techniques/T1078/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "AWS credential harvesting"
+        - "Google Cloud credential theft"
+
+  - id: pypi-supply-chain-backdoor
+    patterns:
+      - pattern-either:
+          # Setup script abuse
+          - pattern: |
+              from setuptools import setup
+          - pattern: |
+              setup(..., install_requires=[...], ...)
+          # Post-install hooks
+          - pattern: |
+              from setuptools.command.install import install
+          - pattern: |
+              class CustomInstall(install):
+                  def run(self):
+                      ...
+                      os.system($MALICIOUS_CMD)
+          # Package metadata manipulation
+          - pattern: |
+              __version__ = $VERSION
+          - pattern: |
+              __author__ = $FAKE_AUTHOR
+          # Dependency confusion
+          - patterns:
+              - pattern: |
+                  setup(name="$PACKAGE_NAME", ...)
+              - metavariable-regex:
+                  metavariable: $PACKAGE_NAME
+                  regex: (?i).*(internal|corp|company|private|test|debug|temp).*
+          # Typosquatting indicators
+          - patterns:
+              - pattern: |
+                  setup(name="$PACKAGE_NAME", ...)
+              - metavariable-regex:
+                  metavariable: $PACKAGE_NAME
+                  regex: (?i)(reqeusts|beautifulsoup|pillow|numpy|scipy|pandas|flask|django).*
+    message: Supply chain backdoor detected - potential package compromise
+    languages: [python]
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      description: "Detects supply chain backdoor patterns including malicious setup scripts, post-install hooks, package metadata manipulation, dependency confusion attempts, and typosquatting indicators. These techniques are used to compromise software supply chains by injecting malicious code into package installation processes or mimicking legitimate packages. This rule specifically targets Python environments and PyPI packages."
+      attack_vectors:
+        - "Malicious setup scripts"
+        - "Post-install hook abuse"
+        - "Dependency confusion"
+        - "Typosquatting attacks"
+      references:
+        - "https://attack.mitre.org/techniques/T1195/"
+        - "https://attack.mitre.org/techniques/T1199/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Malicious setup scripts"
+        - "Post-install hook abuse"

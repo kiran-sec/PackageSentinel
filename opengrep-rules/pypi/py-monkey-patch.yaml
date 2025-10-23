@@ -1,0 +1,29 @@
+rules:
+  - id: py-monkey-patch
+    pattern-either:
+      - pattern: |
+          from $FOO import $BAR
+          ...
+          setattr($BAR, $ALIAS, getattr($BAR, $ORIGINAL))
+          ...
+          setattr($BAR, $ORIGINAL, ...)
+      - pattern: |
+          from $FOO import $BAR
+          ...
+          $ORIGINAL_FUNC = getattr($BAR, $ORIGINAL)
+          ...
+          setattr($BAR, $ALIAS, $ORIGINAL_FUNC)
+          ...
+          setattr($BAR, $ORIGINAL, ...)
+    message: Monkey-patch a function of an existing object.
+    languages:
+      - python
+    severity: INFO
+    metadata:
+      version: latest
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      confidence: LOW
+      references:
+      - https://socket.dev/blog/monkey-patched-pypi-packages-steal-solana-private-keys

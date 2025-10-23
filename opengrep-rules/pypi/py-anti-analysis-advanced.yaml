@@ -1,0 +1,92 @@
+rules:
+  - id: py-anti-analysis-advanced
+    patterns:
+      - pattern-either:
+        # Debugger detection
+        - pattern: |
+            import sys
+            ...
+            if sys.gettrace() is not None:
+                ...
+        - pattern: |
+            if __debug__:
+                sys.exit()
+        # VM/Sandbox detection  
+        - pattern: |
+            import platform
+            ...
+            if $PLATFORM in platform.system():
+                ...
+        - pattern: |
+            import psutil
+            ...
+            for proc in psutil.process_iter():
+                if $PROC_NAME in proc.name():
+                    ...
+        # Analysis tool detection
+        - pattern: |
+            import os
+            ...
+            if 'PYTEST_CURRENT_TEST' in os.environ:
+                ...
+        - pattern: |
+            if 'COVERAGE_PROCESS_START' in os.environ:
+                ...
+        # Time-based evasion
+        - pattern: |
+            import time
+            ...
+            start = time.time()
+            ...
+            if time.time() - start < $THRESHOLD:
+                return
+        # Sleep evasion
+        - pattern: |
+            time.sleep($LONG_DELAY)
+        # Dynamic import obfuscation
+        - pattern: |
+            __import__($MODULE_NAME)
+        - pattern: |
+            importlib.import_module($MODULE_NAME)
+        # Bytecode manipulation
+        - pattern: |
+            compile($CODE, '<string>', 'exec')
+        - pattern: |
+            exec(compile($CODE, '<string>', 'exec'))
+        # Code object creation
+        - pattern: |
+            types.CodeType(...)
+        # Frame manipulation
+        - pattern: |
+            import inspect
+            ...
+            inspect.currentframe()
+        # Exception-based flow control (anti-disassembly)
+        - pattern: |
+            try:
+                raise Exception()
+            except:
+                $MALICIOUS_CODE
+      - metavariable-regex:
+          regex: (?i).*(vmware|virtualbox|qemu|xen|sandbox|analysis|wireshark|ida|ghidra|radare|ollydbg).*
+          metavariable: $PLATFORM
+      - metavariable-regex:
+          regex: (?i).*(vmware|vbox|qemu|sandbox|analysis|wireshark|procmon|regmon|tcpview).*
+          metavariable: $PROC_NAME
+      - metavariable-regex:
+          regex: (3600|7200|[1-9][0-9]{3,})
+          metavariable: $LONG_DELAY
+    message: Advanced anti-analysis and evasion techniques detected in Python code
+    languages:
+      - python
+    severity: HIGH
+    metadata:
+      version: latest
+      endor-category: malware-detection
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      confidence: HIGH
+      malware-type: evasion
+      attack-vector: anti-analysis
+      references:
+        - "https://attack.mitre.org/techniques/T1497/"
+        - "https://attack.mitre.org/techniques/T1622/"

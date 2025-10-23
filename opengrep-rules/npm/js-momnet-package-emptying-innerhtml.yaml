@@ -1,0 +1,24 @@
+rules:
+  - id: js-momnet-package-emptying-innerhtml
+    mode: taint
+    pattern-sources:
+     - pattern: ...String.fromCharCode($KEY)
+     - pattern: ...TextDecoder().decode(new Unit8Array([$KEY]))
+    pattern-sinks:
+     - pattern: eval(...)
+     - pattern: $VALUE.reduce(...)
+    message: Observed that the malicious method deletes the inner HTML body and as a result, crashes the app.
+    metadata:
+      version: latest
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      endor-attack-examples:
+        - https://security.snyk.io/vuln/SNYK-JS-MOMNET-2324797
+      endor-tags:
+        - SEMGREP_IGNORE
+      references:
+        - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/npm/momnet
+      endor-category: malware-detection
+      confidence: LOW
+    languages:
+      - js
+    severity: INFO

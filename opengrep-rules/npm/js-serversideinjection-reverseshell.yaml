@@ -1,0 +1,23 @@
+rules:
+  - id: js-serversideinjection-reverseshell
+    languages:
+      - js
+    message: These pattern would perform reverse shell. This was observed performing server side javascript injection
+    patterns:
+        - pattern: ....connect(...)
+        - pattern: ....pipe($MODULE)
+        - pattern-either:
+          - pattern: ...require("tls")
+          - pattern: ...require("net")
+        - pattern: ...require("child_process")
+    metadata:
+      version: latest
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      endor-attack-examples:
+        - https://www.npmjs.com/advisories/1599
+        - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/npm/http-proxy-middelware/2.9.0
+      references:
+        - https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Reverse%20Shell%20Cheatsheet.md#nodejs
+      endor-category: malware-detection
+      confidence: LOW
+    severity: INFO

@@ -1,0 +1,21 @@
+rules:
+  - id: py-hardcoded-download
+    languages:
+      - python
+    mode: taint
+    pattern-sources:
+      - pattern: requests.$METH(..., '...', ...)
+    pattern-sinks:
+      - pattern: $FH.write(...)
+    message: Response of HTTP call to hard-coded URL is saved on disk.
+    severity: INFO
+    metadata:
+      version: latest
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      confidence: LOW
+      endor-attack-examples:
+        - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/pypi/1337c/4.4.7
+        - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/pypi/yaudio/4.5.2
+        - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/pypi/2022-requests/3.0.0

@@ -1,0 +1,22 @@
+rules:
+  - id: py-builtins
+    patterns:
+      - pattern-either:
+        - pattern: __builtins__.$FUNC
+        - pattern: builtins.$FUNC
+        - pattern: __import__('builtins', ...).$FUNC
+      - metavariable-regex:
+            metavariable: $FUNC
+            regex: (?msi)^(eval|exec|compile)$
+    message: Invocation of sensitive functions (exec, eval, compile) through module builtins. This technique has been used to obfuscate malicious code.
+    languages:
+      - python
+    severity: INFO
+    metadata:
+      version: latest
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      confidence: LOW
+      references:
+      - https://docs.python.org/3/library/builtins.html

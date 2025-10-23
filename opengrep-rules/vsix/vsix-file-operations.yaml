@@ -1,0 +1,69 @@
+rules:
+  - id: vsix-file-system-access
+    message: Detected file system operations in VS Code extension - potential file manipulation
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    patterns:
+      - pattern-either:
+          - pattern: |
+              fs.readFile($PATH, ...)
+          - pattern: |
+              fs.writeFile($PATH, ...)
+          - pattern: |
+              fs.readdir($PATH, ...)
+          - pattern: |
+              fs.unlink($PATH, ...)
+          - pattern: |
+              fs.rmdir($PATH, ...)
+          - pattern: |
+              fs.mkdir($PATH, ...)
+          - pattern: |
+              require('fs').$METHOD(...)
+    pattern-not-inside:
+      - pattern: |
+          vscode.workspace.fs.$METHOD(...)
+      - pattern: |
+          context.extensionPath
+    metadata:
+      category: file_operations
+      confidence: LOW
+      impact: MEDIUM
+      references:
+        - "https://code.visualstudio.com/api/references/vscode-api#FileSystem"
+      cwe:
+        - "CWE-22: Path Traversal"
+      technology:
+        - vscode
+        - extensions
+
+  - id: vsix-sensitive-file-access
+    message: Detected access to sensitive files in VS Code extension - potential credential theft
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    patterns:
+      - pattern-either:
+          - pattern: |
+              fs.readFile("$PATH", ...)
+          - pattern: |
+              fs.readFileSync("$PATH", ...)
+    pattern-where-python: |
+      sensitive_paths = [
+        '.ssh', '.aws', '.docker', '.kube', 'id_rsa', 'id_dsa', 'known_hosts',
+        'credentials', 'config', '.env', '.npmrc', '.pypirc', 'settings.json'
+      ]
+      any(path in vars['$PATH'].lower() for path in sensitive_paths)
+    metadata:
+      category: malware_pattern
+      confidence: HIGH
+      impact: HIGH
+      references:
+        - "https://attack.mitre.org/techniques/T1552/"
+      cwe:
+        - "CWE-522: Insufficiently Protected Credentials"
+      technology:
+        - vscode
+        - extensions

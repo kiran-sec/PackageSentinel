@@ -1,0 +1,70 @@
+rules:
+  - id: py-network-suspicious-domains
+    patterns:
+      - pattern-either:
+        # HTTP requests using requests library
+        - pattern: |
+            requests.get($URL, ...)
+        - pattern: |
+            requests.post($URL, ...)
+        - pattern: |
+            requests.put($URL, ...)
+        - pattern: |
+            requests.delete($URL, ...)
+        - pattern: |
+            requests.request($METHOD, $URL, ...)
+        # HTTP requests using urllib
+        - pattern: |
+            urllib.request.urlopen($URL, ...)
+        - pattern: |
+            urllib.request.Request($URL, ...)
+        - pattern: |
+            urllib2.urlopen($URL, ...)
+        # HTTP requests using http.client
+        - pattern: |
+            http.client.HTTPConnection($HOST, ...)
+        - pattern: |
+            http.client.HTTPSConnection($HOST, ...)
+        # WebSocket connections
+        - pattern: |
+            websocket.create_connection($URL, ...)
+        - pattern: |
+            websocket.WebSocket().connect($URL, ...)
+        # Socket connections
+        - pattern: |
+            socket.socket().connect(($HOST, $PORT))
+        - pattern: |
+            socket.create_connection(($HOST, $PORT), ...)
+        # URL construction with suspicious domains
+        - pattern: |
+            $PROTOCOL + "://" + $DOMAIN + $PATH
+        - pattern: |
+            f"http://{$DOMAIN}/{$PATH}"
+        - pattern: |
+            f"https://{$DOMAIN}/{$PATH}"
+      - metavariable-regex:
+          # Match suspicious TLDs and domains
+          regex: (?i).*(pastebin\.com|bit\.ly|tinyurl\.com|t\.co|discord\.gg|\.tk|\.ml|\.cf|\.ga|\.onion|ngrok\.io|serveo\.net|localtunnel\.me|duckdns\.org).*
+          metavariable: $URL
+      - metavariable-regex:
+          # Match suspicious domain patterns in dynamic construction
+          regex: (?i).*(\.tk|\.ml|\.cf|\.ga|\.onion|ngrok|serveo|localtunnel|duckdns|pastebin|discord\.gg).*
+          metavariable: $DOMAIN
+      - metavariable-regex:
+          # Match suspicious hosts
+          regex: (?i).*(\.tk|\.ml|\.cf|\.ga|\.onion|ngrok|serveo|localtunnel|duckdns|pastebin|discord\.gg).*
+          metavariable: $HOST
+    message: Network request to suspicious domain detected - potential C2 communication or data exfiltration
+    languages:
+      - python
+    severity: ERROR
+    metadata:
+      version: latest
+      endor-category: malware-detection
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      confidence: HIGH
+      malware-type: network-activity
+      attack-vector: command-and-control
+      references:
+        - "https://attack.mitre.org/techniques/T1071/"
+        - "https://docs.python.org/3/library/urllib.request.html"

@@ -1,0 +1,18 @@
+rules:
+- id: silent-process-execution
+  languages:
+  - python
+  message: This package is silently executing an external binary, redirecting stdout,
+    stderr and stdin to /dev/null
+  metadata:
+    confidence: LOW
+    description: Identify when a package silently executes an executable
+    endor-category: malware-detection
+    endor-tags:
+    - ANALYTICS_INFO
+    endor-targets:
+    - ENDOR_TARGET_PACKAGE
+    version: latest
+  pattern: subprocess.$FUNC(..., stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    stdin=subprocess.DEVNULL, ...)
+  severity: INFO

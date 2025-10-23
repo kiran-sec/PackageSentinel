@@ -1,0 +1,27 @@
+rules:
+  - id: js-denial-of-service-attack-dl-tar
+    options:
+      symbolic_propagation: true
+    patterns:
+      - pattern: |
+          $X = require.resolve(Buffer.from(...).toString(...))
+          ...
+      - pattern: |
+          writeFileSync($X, readFileSync($X, ...).$FUN(...))
+    message: The pattern first searches for a line of code that resolves a module path from encoded string and using that path it reads, modifies, and writes the contents of a file.
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      endor-attack-examples:
+        - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/npm/rate-map
+      references:
+        - https://www.npmjs.com/advisories/1083
+        - https://harry.garrood.me/blog/malicious-code-in-purescript-npm-installer/
+        - https://www.npmjs.com/advisories/1082
+      endor-category: malware-detection
+      endor-tags:
+        - ANALYTICS_INFO
+    languages:
+      - js
+    severity: WARNING

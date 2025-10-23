@@ -1,0 +1,38 @@
+rules:
+- id: obfuscation
+  languages:
+  - python
+  message: This package is using a common obfuscation method often used by malware
+  metadata:
+    confidence: LOW
+    description: Identify when a package uses a common obfuscation method often used
+      by malware
+    endor-category: malware-detection
+    endor-tags:
+    - ANALYTICS_INFO
+    endor-targets:
+    - ENDOR_TARGET_PACKAGE
+    version: latest
+  patterns:
+  - pattern-either:
+    - pattern: eval("\145\166\141\154")
+    - pattern: eval("\x65\x76\x61\x6c")
+    - pattern: _____=eval(...)
+    - pattern: $OBJ.getattr(__builtins__, ...)
+    - pattern: getattr(builtins, ...)
+    - pattern: '''''.join(chr($X) for $X in [...])
+
+        '
+    - pattern: '''''.join(map(chr, [...]))
+
+        '
+    - patterns:
+      - pattern: '...'
+      - pattern-not-inside: '"..."'
+      - pattern-regex: ^(.*?);?[\h]{150,};?.{10,}$
+    - patterns:
+      - pattern: $HEX.decode(...)
+      - metavariable-regex:
+          metavariable: $HEX
+          regex: b['"](\\[xX]\S{1,5}){4,}['"]
+  severity: INFO

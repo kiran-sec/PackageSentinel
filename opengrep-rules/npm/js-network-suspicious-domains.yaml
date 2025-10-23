@@ -1,0 +1,50 @@
+rules:
+  - id: js-network-suspicious-domains
+    patterns:
+      - pattern-either:
+        # HTTP requests to suspicious domains
+        - pattern: |
+            $HTTP.get($URL, ...)
+        - pattern: |
+            $HTTP.post($URL, ...)
+        - pattern: |
+            $HTTP.request($URL, ...)
+        - pattern: |
+            fetch($URL, ...)
+        - pattern: |
+            axios.get($URL, ...)
+        - pattern: |
+            axios.post($URL, ...)
+        - pattern: |
+            $CLIENT.request($URL, ...)
+        - pattern: |
+            new XMLHttpRequest().open($METHOD, $URL, ...)
+        # WebSocket connections
+        - pattern: |
+            new WebSocket($URL)
+        # Dynamic URL construction with suspicious TLDs
+        - pattern: |
+            $PROTOCOL + "://" + $DOMAIN + $PATH
+      - metavariable-regex:
+          # Match suspicious TLDs and domains
+          regex: (?i).*(pastebin\.com|bit\.ly|tinyurl\.com|t\.co|discord\.gg|\.tk|\.ml|\.cf|\.ga|\.onion|ngrok\.io|serveo\.net|localtunnel\.me).*
+          metavariable: $URL
+      - metavariable-regex:
+          # Match suspicious domain patterns in dynamic construction
+          regex: (?i).*(\.tk|\.ml|\.cf|\.ga|\.onion|ngrok|serveo|localtunnel).*
+          metavariable: $DOMAIN
+    message: Network request to suspicious domain detected - potential C2 communication or data exfiltration
+    languages:
+      - javascript
+      - typescript
+    severity: ERROR
+    metadata:
+      version: latest
+      endor-category: malware-detection
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      confidence: HIGH
+      malware-type: network-activity
+      attack-vector: command-and-control
+      references:
+        - "https://attack.mitre.org/techniques/T1071/"
+        - "https://github.com/MITRE-ATT&CK/attack-data/blob/master/techniques/T1071.001.md"

@@ -1,0 +1,34 @@
+rules:
+  - id: java-process-builder
+    languages:
+      - java
+    # mode: taint
+    # pattern-sources:
+    #   - pattern: '...'
+    # pattern-sinks:
+    #   - pattern: $PB.start()
+    pattern-either:
+      - pattern: |
+          $PB = new ProcessBuilder("...", ...);
+          ...
+          $PB.start();
+      - pattern: |
+          $PB = new ProcessBuilder(...);
+          ...
+          $PB.command("...", ...);
+          ...
+          $PB.start();
+      - pattern: new ProcessBuilder("..."). ... .start();
+      - pattern: new ProcessBuilder("...", ...). ... .command("...", ...). ... .start();
+      - pattern: new ProcessBuilder(). ... .command("...", ...). ... .start();
+    message: String literal(s) passed to ProcessBuilder() or ProcessBuilder.command()
+    severity: INFO
+    metadata:
+      version: latest
+      confidence: LOW
+      description: "Detects process execution using ProcessBuilder with string literals, which may indicate command execution for malicious purposes"
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      references:
+        - https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/ProcessBuilder.html

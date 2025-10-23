@@ -1,0 +1,68 @@
+rules:
+  - id: js-persistence-mechanisms
+    patterns:
+      - pattern-either:
+        # Service Worker persistence
+        - pattern: |
+            navigator.serviceWorker.register($URL)
+        - pattern: |
+            self.addEventListener($EVENT, $HANDLER)
+        # Browser extension manipulation
+        - pattern: |
+            chrome.extension.$METHOD(...)
+        - pattern: |
+            browser.extension.$METHOD(...)
+        # Local storage persistence
+        - pattern: |
+            localStorage.setItem($KEY, $MALICIOUS_CODE)
+        - pattern: |
+            sessionStorage.setItem($KEY, $MALICIOUS_CODE)
+        # IndexedDB persistence
+        - pattern: |
+            indexedDB.open($DB_NAME, $VERSION)
+        # Cache API abuse
+        - pattern: |
+            caches.open($CACHE_NAME).then($CALLBACK)
+        # Web Worker persistence
+        - pattern: |
+            new Worker(URL.createObjectURL(new Blob([$CODE])))
+        # Event listener persistence
+        - pattern: |
+            document.addEventListener($EVENT, $MALICIOUS_HANDLER, true)
+        - pattern: |
+            window.addEventListener('beforeunload', $HANDLER)
+        - pattern: |
+            setInterval($MALICIOUS_FUNC, $INTERVAL)
+        # DOM mutation observer for persistence
+        - pattern: |
+            new MutationObserver($CALLBACK).observe($TARGET, $CONFIG)
+        # History API manipulation
+        - pattern: |
+            history.pushState($STATE, $TITLE, $URL)
+        # Manifest manipulation
+        - pattern: |
+            navigator.serviceWorker.getRegistrations().then($HANDLER)
+      - metavariable-regex:
+          regex: (?i).*(malicious|payload|backdoor|persist|stealth|hidden).*
+          metavariable: $MALICIOUS_CODE
+      - metavariable-regex:
+          regex: (?i).*(malicious|payload|backdoor|persist|stealth).*
+          metavariable: $MALICIOUS_FUNC
+      - metavariable-regex:
+          regex: (?i).*(malicious|payload|backdoor|persist|stealth).*
+          metavariable: $MALICIOUS_HANDLER
+    message: Persistence mechanism detected - malware attempting to maintain presence
+    languages:
+      - javascript
+      - typescript
+    severity: HIGH
+    metadata:
+      version: latest
+      endor-category: malware-detection
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      confidence: MEDIUM
+      malware-type: persistence
+      attack-vector: persistence
+      references:
+        - "https://attack.mitre.org/tactics/TA0003/"
+        - "https://attack.mitre.org/techniques/T1547/"

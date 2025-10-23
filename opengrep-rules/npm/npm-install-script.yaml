@@ -1,0 +1,40 @@
+rules:
+- id: npm-install-script
+  languages:
+  - json
+  message: The package.json has a script automatically running when the package is
+    installed
+  metadata:
+    confidence: LOW
+    description: Identify when a package has a pre or post-install script automatically
+      running commands
+    endor-category: malware-detection
+    endor-tags:
+    - SEMGREP_IGNORE
+    endor-targets:
+    - ENDOR_TARGET_PACKAGE
+    version: latest
+  paths:
+    include:
+    - '*/package.json'
+    - '*/npm-install-script.json'
+  patterns:
+  - pattern-inside: '"scripts": {...}
+
+      '
+  - pattern-either:
+    - pattern: '"preinstall": $VAR
+
+        '
+    - pattern: '"postinstall": $VAR
+
+        '
+    - pattern: '"install": $VAR
+
+        '
+  - metavariable-pattern:
+      metavariable: $VAR
+      pattern-regex: ^(?!"(npx patch-package|nuxt prepare|npx only-allow pnpm|prisma
+        generate|ibmtelemetry --config=telemetry.yml|husky install|tsc \|\| exit 0|patch-package|husky|echo
+        \"preinstall script\")").*$
+  severity: INFO

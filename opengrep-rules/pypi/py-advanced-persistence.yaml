@@ -1,0 +1,98 @@
+rules:
+  - id: py-advanced-persistence
+    patterns:
+      - pattern-either:
+        # Crontab manipulation
+        - pattern: |
+            subprocess.call(['crontab', ...])
+        - pattern: |
+            os.system('crontab ...')
+        # Systemd service creation
+        - pattern: |
+            with open('/etc/systemd/system/$SERVICE.service', 'w') as f:
+                ...
+        - pattern: |
+            subprocess.call(['systemctl', 'enable', $SERVICE])
+        # Windows registry manipulation
+        - pattern: |
+            import winreg
+            ...
+            winreg.SetValue($HKEY, $SUBKEY, $TYPE, $VALUE)
+        - pattern: |
+            subprocess.call(['reg', 'add', ...])
+        # Python site-packages manipulation
+        - pattern: |
+            import site
+            ...
+            site.getsitepackages()
+        - pattern: |
+            shutil.copy($MALICIOUS_FILE, site.getsitepackages()[0])
+        # Startup folder persistence (Windows)
+        - pattern: |
+            startup_folder = os.path.join(os.getenv('APPDATA'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
+        # Python path manipulation
+        - pattern: |
+            sys.path.insert(0, $MALICIOUS_PATH)
+        - pattern: |
+            os.environ['PYTHONPATH'] = $MALICIOUS_PATH
+        # Hook installation
+        - pattern: |
+            import builtins
+            ...
+            builtins.$FUNC = $MALICIOUS_FUNC
+        - pattern: |
+            import sys
+            ...
+            sys.modules[$MODULE] = $MALICIOUS_MODULE
+        # Git hooks installation
+        - pattern: |
+            with open('.git/hooks/$HOOK', 'w') as f:
+                f.write($MALICIOUS_SCRIPT)
+        - pattern: |
+            os.chmod('.git/hooks/$HOOK', 0o755)
+        # Package modification
+        - pattern: |
+            with open($PACKAGE_FILE, 'a') as f:
+                f.write($MALICIOUS_CODE)
+        # Environment variable persistence
+        - pattern: |
+            with open(os.path.expanduser('~/.bashrc'), 'a') as f:
+                f.write($MALICIOUS_ENV)
+        - pattern: |
+            with open(os.path.expanduser('~/.profile'), 'a') as f:
+                f.write($MALICIOUS_ENV)
+        # Socket server for backdoor
+        - pattern: |
+            import socket
+            ...
+            server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            server.bind(($HOST, $PORT))
+            server.listen($BACKLOG)
+        # Reverse shell
+        - pattern: |
+            socket.connect(($REMOTE_HOST, $REMOTE_PORT))
+        - pattern: |
+            subprocess.Popen(['/bin/sh'], stdin=s, stdout=s, stderr=s)
+      - metavariable-regex:
+          regex: (?i).*(malicious|backdoor|payload|stealth|persist).*
+          metavariable: $MALICIOUS_FILE
+      - metavariable-regex:
+          regex: (?i).*(malicious|backdoor|payload|stealth|persist).*
+          metavariable: $MALICIOUS_CODE
+      - metavariable-regex:
+          regex: (?i).*(malicious|backdoor|payload|stealth|persist).*
+          metavariable: $MALICIOUS_SCRIPT
+    message: Advanced persistence or backdoor mechanism detected in Python code
+    languages:
+      - python
+    severity: CRITICAL
+    metadata:
+      version: latest
+      endor-category: malware-detection
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      confidence: HIGH
+      malware-type: persistence
+      attack-vector: system-modification
+      references:
+        - "https://attack.mitre.org/tactics/TA0003/"
+        - "https://attack.mitre.org/techniques/T1547/"

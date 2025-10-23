@@ -1,0 +1,56 @@
+rules:
+  - id: js-read-leveldb-file
+    options:
+      symbolic_propagation: true
+    pattern-either:
+    - patterns:
+      - pattern-either:
+          - pattern: fs.readFile(...)
+          - pattern: fs.readFileSync(...)
+      # Loop over files in dir and check for ldb file extension
+      - pattern-inside: |
+            fs.readdirSync(...).map($F => {
+              ...
+              if (<... $F.endsWith(".ldb") ...>) {
+                ...
+              }
+              ...
+            });  
+    - patterns:
+      # Match the following patterns only when the file extension is ".ldb"
+      - pattern-inside: |
+                  if (<...$FILE.endsWith(".ldb")...>) 
+                    {
+                      ...
+                    }      
+      - pattern-either:
+          - pattern: fs.readFile(...)
+          - pattern: fs.readFileSync(...)
+    # Below pattern catches the level package to read a LevelDB file containing login data in an Electron app
+    - pattern: |
+                electron.remote.app.getPath(...)
+                ...
+                
+                $DB = level(..., { valueEncoding: 'binary' })
+                ...
+                $DB.createReadStream()
+    # Below code snippet reads a LevelDB file containing data from the thirdparty apps. By accessing the user's profile directory and appending the path to the LevelDB file. Also, reads the context of the file using createReadstream.This can be used to exfiltrate sensitive data such as cookies and access tokens. createReadstream() is the method of the levelup library DB.
+    - pattern: |
+              levelup(leveldown(path.join(path.join(electron.remote.app.getPath(...),...), ...))).createReadStream()
+    # Below code snippet reads a LevelDB file containing data from the browser. By accessing the user's browser profile directories and appending the path to the LevelDB file. Also, reads the context of the file using createReadstream.This can be used to exfiltrate sensitive data such as cookies and access tokens.
+    - pattern: |
+              levelup(leveldown(path.join(path.join(os.homedir(), ...), 'Web Data'))).createReadStream()
+
+    message: Read access to various Chromium/Electron LevelDB files, which can be an indicator for token exfiltration.
+    metadata:
+      version: latest
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      endor-attack-examples:
+        - https://blog.phylum.io/phylum-discovers-npm-package-mathjs-min-contains-discord-token-grabber?utm_medium
+      references:
+        - https://www.forensicfocus.com/articles/after-sqlite-what-next-a-must-read-primer-on-leveldb/
+      endor-category: malware-detection
+      confidence: LOW
+    languages:
+      - javascript
+    severity: INFO

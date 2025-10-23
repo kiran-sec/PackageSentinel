@@ -1,0 +1,56 @@
+rules:
+  - id: py-pip-install-on-failing-import
+    languages:
+      - python
+    # One pattern for OS commands with string arg, and another one for OS
+    # commands with list arg
+    pattern-either:
+      - patterns:
+        - pattern: |
+            try:
+              ...
+              import $IMP
+              ...
+            except ...:
+              ...
+              $MOD.$FUNC(..., '$INSTALL', ...)
+              ...
+              import $IMP
+        - metavariable-regex:
+              metavariable: $INSTALL
+              regex: ^.* install (.*)$
+        - metavariable-regex:
+              metavariable: $FUNC
+              # All functions from py-os-cmd (only prefix is used for os.exec,
+              # os.popen, os.posix_spawn, os.spawn, popen2.popen)
+              regex: (?i)^(call|run|popen|check_output|check_call|getstatusoutput|getoutput|exec|posix_spawn|spawn|system)
+      - patterns:
+        - pattern: |
+            try:
+              ...
+              import $IMP
+              ...
+            except ...:
+              ...
+              $MOD.$FUNC([..., '$INSTALL', ...], ...)
+              ...
+              import $IMP
+        - metavariable-regex:
+              metavariable: $INSTALL
+              regex: ^install$
+        - metavariable-regex:
+              metavariable: $FUNC
+              # All functions from py-os-cmd (only prefix for os.exec, os.popen, os.posix_spawn, os.spawn, popen2.popen)
+              regex: ^(?i)(call|run|popen|check_output|check_call|getstatusoutput|getoutput|exec|posix_spawn|spawn|system)
+    message: Attempt to import a module in a try-clause, followed by an install command in the except-clause if the import fails.
+    severity: INFO
+    metadata:
+      version: latest
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      confidence: MEDIUM
+      references:
+        - https://docs.python.org/3/library/os.html#os.system
+      endor-attack-examples:
+        - https://research.checkpoint.com/2022/check-point-cloudguard-spectral-exposes-new-obfuscation-techniques-for-malicious-packages-on-pypi/

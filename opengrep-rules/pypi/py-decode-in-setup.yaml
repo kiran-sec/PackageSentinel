@@ -1,0 +1,29 @@
+rules:
+  - id: py-decode-in-setup
+    languages:
+      - python
+    options:
+      symbolic_propagation: true
+    patterns:
+      - pattern-either:
+        - pattern: base64.$FUNC(...)
+        - pattern: __import__('base64').$FUNC(...)
+      - metavariable-regex:
+          metavariable: $FUNC
+          regex: .*(?i)(decode).*
+    paths:
+      include:
+        - "setup.py"
+        - "py-decode-in-setup.py" # To catch patterns in the sample file during --test
+    message: Use of decoding function base64.$FUNC in setup.py
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: HIGH
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      endor-tags:
+        - ANALYTICS_IMPACT
+      endor-attack-examples:
+        - https://apiiro.com/blog/apiiros-ai-engine-detected-a-software-supply-chain-attack-in-pypi/

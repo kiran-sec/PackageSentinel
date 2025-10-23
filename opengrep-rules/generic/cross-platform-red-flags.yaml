@@ -1,0 +1,274 @@
+rules:
+  - id: generic-suspicious-urls
+    patterns:
+      - pattern-either:
+          # Suspicious TLDs
+          - pattern-regex: (?i)https?://[^/\s]*\.(tk|ml|ga|cf|cc|pw|top|click|download|zip|review|country|kim|work|gq|date|racing|loan|win|bid|science|party|accountant|stream|gdn|mom|xin|ren|loan|men|vip|christmas|pro)(/.*)?$
+          # IP addresses instead of domains
+          - pattern-regex: https?://\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?(/.*)?$
+          # Localhost/internal IPs (suspicious in production)
+          - pattern-regex: https?://(127\.0\.0\.1|localhost|192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)(:\d+)?(/.*)?$
+          # Suspicious subdomains
+          - pattern-regex: (?i)https?://[^/]*\.(temp|tmp|test|dev|admin|api|secure|bank|payment|login|auth|ssl|cdn|static|media|update|download|install|setup)\.[a-z]+(/.*)?$
+          # URL shorteners (potential hiding)
+          - pattern-regex: https?://(bit\.ly|tinyurl\.com|t\.co|goo\.gl|ow\.ly|is\.gd|buff\.ly|adf\.ly|short\.link|tr\.im|tiny\.cc)(/.*)?$
+          # Suspicious file extensions in URLs
+          - pattern-regex: (?i)https?://[^/\s]*\.(exe|bat|cmd|scr|pif|com|jar|zip|rar|7z|dmg|pkg|deb|rpm|msi|ps1|vbs|js|php|asp|jsp)$
+    message: Suspicious URL patterns detected - potential malicious infrastructure
+    languages:
+      - javascript
+      - typescript  
+      - python
+      - java
+      - go
+      - php
+      - ruby
+      - csharp
+    severity: WARNING
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      description: "Detects suspicious URL patterns including domains with questionable TLDs, direct IP addresses, localhost references, suspicious subdomains, URL shorteners, and URLs pointing to executable files. These patterns are commonly associated with malicious infrastructure, phishing sites, C2 servers, and malware distribution networks. This rule applies across multiple programming languages and ecosystems."
+      attack_vectors:
+        - "Malicious infrastructure domains"
+        - "IP-based C2 communication"
+        - "URL shortener obfuscation"
+        - "Direct executable downloads"
+      references:
+        - "https://attack.mitre.org/techniques/T1071/"
+        - "https://attack.mitre.org/techniques/T1105/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Malicious infrastructure domains"
+        - "IP-based C2 communication"
+
+  - id: generic-encoded-payloads
+    patterns:
+      - pattern-either:
+          # Base64 encoded executables (common patterns)
+          - pattern-regex: (?i)['\"]([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?['\"]
+          # Hex encoded strings (potential shellcode)
+          - pattern-regex: (?i)['\"]([0-9a-f]{2}\\x|\\x[0-9a-f]{2}){10,}['\"]
+          # Multiple encoding layers
+          - pattern-regex: (?i)['\"][A-Za-z0-9+/=]{50,}['\"].*['\"][A-Za-z0-9+/=]{50,}['\"]
+          # Suspicious Unicode escapes
+          - pattern-regex: (\\u[0-9a-fA-F]{4}){5,}
+          # URL encoded payloads
+          - pattern-regex: (?i)(%[0-9a-f]{2}){20,}
+          # ROT13/Caesar cipher patterns
+          - pattern-regex: ['\"][bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ]{30,}['\"]
+      - metavariable-analysis:
+          analyzer: entropy
+          metavariable: $PATTERN
+    message: Encoded payload detected - potential obfuscated malicious content
+    languages:
+      - javascript
+      - typescript
+      - python
+      - java
+      - go
+      - php
+      - ruby
+      - csharp
+      - c
+      - cpp
+    severity: WARNING
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      description: "Detects various encoded payload patterns including base64, hexadecimal, Unicode escapes, URL encoding, and cipher-like strings that may contain obfuscated malicious content. These encoding techniques are commonly used by malware to hide shellcode, configuration data, or executable payloads from static analysis tools. This rule applies across multiple programming languages and ecosystems."
+      attack_vectors:
+        - "Base64 encoded executables"
+        - "Hexadecimal shellcode"
+        - "Unicode obfuscation"
+        - "Multiple encoding layers"
+      references:
+        - "https://attack.mitre.org/techniques/T1027/"
+        - "https://attack.mitre.org/techniques/T1140/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Base64 encoded executables"
+        - "Hexadecimal shellcode"
+
+  - id: generic-command-injection
+    patterns:
+      - pattern-either:
+          # Command chaining
+          - pattern-regex: (?i)['\"][^'\"]*[;&|`$()]{2,}[^'\"]*['\"]
+          # Shell metacharacters
+          - pattern-regex: ['\"][^'\"]*(\$\([^)]*\)|`[^`]*`|\${[^}]*})[^'\"]*['\"]
+          # Pipe to shell
+          - pattern-regex: (?i)['\"][^'\"]*\|\s*(sh|bash|cmd|powershell|python|perl|ruby)[^'\"]*['\"]
+          # Download and execute patterns
+          - pattern-regex: (?i)['\"][^'\"]*((curl|wget|powershell|python|ruby)\s+[^'\"]*\|\s*(sh|bash|python|ruby|powershell))[^'\"]*['\"]
+          # Process substitution
+          - pattern-regex: ['\"][^'\"]*<\([^)]*\)[^'\"]*['\"]
+    message: Command injection patterns detected - potential code execution
+    languages:
+      - javascript
+      - typescript
+      - python
+      - java
+      - go
+      - php
+      - ruby
+      - bash
+      - sh
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: HIGH
+      description: "Detects command injection patterns including command chaining, shell metacharacters, pipe operations, download-and-execute sequences, and process substitution. These patterns indicate potential command injection vulnerabilities or malicious command execution that could be used for system compromise, remote code execution, or privilege escalation. This rule applies across multiple programming languages and ecosystems."
+      attack_vectors:
+        - "Command chaining attacks"
+        - "Shell metacharacter injection"
+        - "Download and execute"
+        - "Process substitution abuse"
+      references:
+        - "https://attack.mitre.org/techniques/T1059/"
+        - "https://attack.mitre.org/techniques/T1105/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Command chaining attacks"
+        - "Shell metacharacter injection"
+
+  - id: generic-cryptocurrency-patterns
+    patterns:
+      - pattern-either:
+          # Bitcoin addresses
+          - pattern-regex: ['\"][13][a-km-zA-HJ-NP-Z1-9]{25,34}['\"]
+          # Ethereum addresses
+          - pattern-regex: ['\"]0x[a-fA-F0-9]{40}['\"]
+          # Monero addresses
+          - pattern-regex: ['\"]4[0-9AB][1-9A-HJ-NP-Za-km-z]{93}['\"]
+          # Mining pool patterns
+          - pattern-regex: (?i)['\"][^'\"]*pool[^'\"]*['\"]
+          - pattern-regex: (?i)['\"]stratum\+tcp://[^'\"]*['\"]
+          # Wallet-related terms
+          - pattern-regex: (?i)['\"][^'\"]*wallet[^'\"]*['\"]
+          - pattern-regex: (?i)['\"][^'\"]*mining[^'\"]*['\"]
+          # Cryptocurrency APIs
+          - pattern-regex: (?i)api\.(coinbase|binance|kraken|bitfinex|poloniex)\.com
+          # Hardware indicators (mining rigs)
+          - pattern-regex: (?i)(gpu|cpu|hashrate|miner|rig)
+    message: Cryptocurrency patterns detected - potential cryptojacking or theft
+    languages:
+      - javascript
+      - typescript
+      - python
+      - java
+      - go
+      - php
+      - ruby
+      - csharp
+    severity: WARNING
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      description: "Detects cryptocurrency-related patterns including wallet addresses, mining pool connections, cryptocurrency APIs, and mining-related terminology. These patterns may indicate cryptojacking malware, cryptocurrency theft, unauthorized mining operations, or legitimate cryptocurrency functionality that requires security review. This rule applies across multiple programming languages and ecosystems."
+      attack_vectors:
+        - "Unauthorized cryptocurrency mining"
+        - "Wallet address harvesting"
+        - "Mining pool connections"
+        - "Cryptocurrency API abuse"
+      references:
+        - "https://attack.mitre.org/techniques/T1496/"
+        - "https://attack.mitre.org/techniques/T1552/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Unauthorized cryptocurrency mining"
+        - "Wallet address harvesting"
+
+  - id: generic-data-exfiltration
+    patterns:
+      - pattern-either:
+          # Large data collection patterns
+          - pattern-regex: (?i)(collect|gather|harvest|steal|extract|dump)[^a-z]*(data|info|credentials|passwords|keys|tokens)
+          # Archive creation for exfiltration
+          - pattern-regex: (?i)(zip|tar|rar|7z|compress|archive)[^a-z]*(files|data|documents|credentials)
+          # Upload/send patterns
+          - pattern-regex: (?i)(upload|send|post|transmit|exfiltrate)[^a-z]*(data|files|info|credentials)
+          # Clipboard access
+          - pattern-regex: (?i)(clipboard|copy|paste|selection)
+          # Browser data access
+          - pattern-regex: (?i)(cookies|history|bookmarks|passwords|sessions|localstorage)
+          # System enumeration
+          - pattern-regex: (?i)(enumerate|scan|probe|discover)[^a-z]*(system|network|users|files|processes)
+    message: Data exfiltration patterns detected - potential information theft
+    languages:
+      - javascript
+      - typescript
+      - python
+      - java
+      - go
+      - php
+      - ruby
+      - csharp
+    severity: WARNING
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      description: "Detects data exfiltration patterns including data collection terminology, archive creation for bulk transfer, upload/transmission operations, clipboard access, browser data harvesting, and system enumeration activities. These patterns may indicate information theft, credential harvesting, or unauthorized data collection commonly performed by malware. This rule applies across multiple programming languages and ecosystems."
+      attack_vectors:
+        - "Credential harvesting"
+        - "Browser data theft"
+        - "System enumeration"
+        - "Bulk data collection"
+      references:
+        - "https://attack.mitre.org/techniques/T1041/"
+        - "https://attack.mitre.org/techniques/T1005/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Credential harvesting"
+        - "Browser data theft"
+
+  - id: generic-anti-analysis
+    patterns:
+      - pattern-either:
+          # Debugger detection
+          - pattern-regex: (?i)(debugger|debug|gdb|windbg|ollydbg|x64dbg|immunity|ida)
+          # Sandbox detection
+          - pattern-regex: (?i)(sandbox|virtualbox|vmware|vbox|qemu|xen|hyper-v|virtual)
+          # Analysis tool detection
+          - pattern-regex: (?i)(wireshark|fiddler|burp|nmap|metasploit|kali|analysis|reverse|engineer)
+          # Time-based detection
+          - pattern-regex: (?i)(sleep|delay|timeout|timer)[^a-z]*(check|detect|evasion)
+          # Environment checks
+          - pattern-regex: (?i)(username|hostname|computername|domain)[^a-z]*(admin|analyst|malware|virus|researcher)
+          # Process/service detection
+          - pattern-regex: (?i)(process|service)[^a-z]*(monitor|analysis|security|antivirus|av|firewall)
+    message: Anti-analysis techniques detected - evasion behavior
+    languages:
+      - javascript
+      - typescript
+      - python
+      - java
+      - go
+      - php
+      - ruby
+      - csharp
+      - c
+      - cpp
+    severity: WARNING
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      description: "Detects anti-analysis techniques including debugger detection, sandbox evasion, analysis tool identification, timing-based detection, environment profiling, and security software enumeration. These techniques are commonly used by malware to evade detection, complicate reverse engineering, and avoid execution in analysis environments. This rule applies across multiple programming languages and ecosystems."
+      attack_vectors:
+        - "Debugger detection"
+        - "Sandbox evasion"
+        - "Analysis tool detection"
+        - "Environment profiling"
+      references:
+        - "https://attack.mitre.org/techniques/T1497/"
+        - "https://attack.mitre.org/techniques/T1518/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Debugger detection"
+        - "Sandbox evasion"

@@ -1,0 +1,89 @@
+rules:
+  - id: py-cryptojacking-mining
+    patterns:
+      - pattern-either:
+        # Mining library imports
+        - pattern: |
+            import $MINER
+        - pattern: |
+            from $MINER import $FUNCS
+        - pattern: |
+            __import__($MINER)
+        # Mining function calls
+        - pattern: |
+            $OBJ.start()
+        - pattern: |
+            $OBJ.mine()
+        - pattern: |
+            $OBJ.start_mining()
+        - pattern: |
+            $MINER_CLASS($CONFIG)
+        # Cryptocurrency-related operations
+        - pattern: |
+            hashlib.sha256($DATA).hexdigest()
+        - pattern: |
+            hashlib.scrypt($PASSWORD, ...)
+        - pattern: |
+            hashlib.pbkdf2_hmac($HASH_NAME, ...)
+        # Mining pool connections
+        - pattern: |
+            socket.connect(($POOL_HOST, $POOL_PORT))
+        - pattern: |
+            requests.post($POOL_URL, ...)
+        # CPU-intensive loops with hash operations
+        - pattern: |
+            while $CONDITION:
+                ...
+                hashlib.sha256($DATA)
+                ...
+        - pattern: |
+            for $VAR in range($LARGE_NUM):
+                ...
+                hashlib.$HASH_FUNC($DATA)
+                ...
+        # Threading for mining
+        - pattern: |
+            threading.Thread(target=$MINING_FUNC, ...)
+        - pattern: |
+            multiprocessing.Process(target=$MINING_FUNC, ...)
+        # GPU computing libraries (used in mining)
+        - pattern: |
+            import pycuda
+        - pattern: |
+            import pyopencl
+        - pattern: |
+            import cupy
+      - metavariable-regex:
+          # Mining library names
+          regex: (?i).*(miner|mining|crypto|coin|hash|scrypt|bitcoin|ethereum|monero|zcash|pool).*
+          metavariable: $MINER
+      - metavariable-regex:
+          # Mining pool hostnames
+          regex: (?i).*(pool\.|mining\.|stratum\.|xmr\.|btc\.|eth\.|\d+\.\d+\.\d+\.\d+).*
+          metavariable: $POOL_HOST
+      - metavariable-regex:
+          # Mining pool URLs
+          regex: (?i).*(pool\.|mining\.|stratum\.).*
+          metavariable: $POOL_URL
+      - metavariable-regex:
+          # Mining function names
+          regex: (?i).*(mine|mining|hash|work|solve|compute).*
+          metavariable: $MINING_FUNC
+      - metavariable-regex:
+          # Large iteration counts (common in mining)
+          regex: (?i).*(1000000|10\*\*6|0x[0-9a-f]{6,}).*
+          metavariable: $LARGE_NUM
+    message: Cryptocurrency mining code detected - potential cryptojacking malware
+    languages:
+      - python
+    severity: ERROR
+    metadata:
+      version: latest
+      endor-category: malware-detection
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      confidence: HIGH
+      malware-type: cryptojacking
+      attack-vector: resource-hijacking
+      references:
+        - "https://attack.mitre.org/techniques/T1496/"
+        - "https://www.welivesecurity.com/2018/03/05/cryptocurrency-mining-malware-2018/"

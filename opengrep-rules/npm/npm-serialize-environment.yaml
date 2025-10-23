@@ -1,0 +1,30 @@
+rules:
+- id: npm-serialize-environment
+  languages:
+  - javascript
+  message: 'This package contains a call to `JSON.stringify(process.env)` which indicates
+    that the whole set of environment
+
+    variables are serialized at some point. This can indicate that the package attempts
+    to steal the environment
+
+    from the production host.
+
+    '
+  metadata:
+    confidence: MEDIUM
+    description: Identify when a package serializes 'process.env' to exfiltrate environment
+      variables
+    endor-category: malware-detection
+    endor-tags:
+    - ANALYTICS_INFO
+    endor-targets:
+    - ENDOR_TARGET_PACKAGE
+    version: latest
+  patterns:
+  - pattern-either:
+    - pattern: JSON.stringify(process.env)
+    - pattern: JSON.stringify(process["env"])
+    - pattern: JSON.stringify(process['env'])
+    - pattern: JSON.stringify(process[`env`])
+  severity: WARNING

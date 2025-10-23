@@ -1,0 +1,36 @@
+rules:
+  - id: py-read-leveldb-file
+    options:
+      symbolic_propagation: true
+    pattern-either:
+      - patterns:
+          - pattern-either:
+              - pattern: open(...)
+              - pattern: open(...).readlines()
+          # Check for ldb file extension
+          - pattern-inside: |
+                if <... $FILE.endswith(".ldb") ...>:
+                  ...
+      - patterns:
+          - pattern-either:
+              - pattern: open(...)
+              - pattern: open(...).readlines()
+          # Check for ldb file extension
+          - pattern-inside: |
+              for $FILE in os.listdir(...):
+                ...
+                if <... $FILE.endswith(".ldb") ...>:
+                  ...
+    message: Direct read access to Chromium/Electron LevelDB files, which can be an indicator for token exfiltration.
+    metadata:
+      version: latest
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      endor-attack-examples:
+        - https://blog.phylum.io/phylum-discovers-npm-package-mathjs-min-contains-discord-token-grabber?utm_medium
+      references:
+        - https://www.forensicfocus.com/articles/after-sqlite-what-next-a-must-read-primer-on-leveldb/
+      endor-category: malware-detection
+      confidence: LOW
+    languages:
+      - python
+    severity: INFO

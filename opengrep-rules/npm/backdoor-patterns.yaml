@@ -1,0 +1,126 @@
+rules:
+  - id: backdoor-keywords
+    patterns:
+      - pattern-either:
+          - pattern: |
+              "backdoor"
+          - pattern: |
+              "reverse shell"
+          - pattern: |
+              "command and control"
+          - pattern: |
+              "c2 server" 
+          - pattern: |
+              "c2_server"
+          - pattern: |
+              "remote access"
+          - pattern: |
+              "shell_exec"
+          - pattern: |
+              "reverse_shell"
+          - pattern: |
+              "backdoor_config"
+          - pattern: |
+              "evil_server"
+          - pattern: |
+              "attack_vector"
+          - pattern: |
+              "malicious"
+      - pattern-not-inside: |
+          // ...
+      - pattern-not-inside: |
+          /* ... */
+    message: Detected backdoor-related keywords in code
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      category: security
+      subcategory: malware
+      confidence: HIGH
+      impact: CRITICAL
+      technology: [npm, javascript]
+      references:
+        - https://attack.mitre.org/techniques/T1059/
+      cwe: "CWE-506: Embedded Malicious Code"
+
+  - id: c2-server-configuration
+    patterns:
+      - pattern-either:
+          - pattern: |
+              c2_servers: [...]
+          - pattern: |
+              "c2_servers": [...]
+          - pattern: |
+              reverse_shell_ports: [...]
+          - pattern: |
+              "reverse_shell_ports": [...]
+    message: Detected Command & Control server configuration
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      category: security
+      subcategory: malware
+      confidence: HIGH
+      impact: CRITICAL
+      technology: [npm, javascript]
+      references:
+        - https://attack.mitre.org/techniques/T1071/
+      cwe: "CWE-506: Embedded Malicious Code"
+
+  - id: suspicious-domain-patterns
+    patterns:
+      - pattern-either:
+          - pattern: |
+              "$DOMAIN.tk:$PORT"
+          - pattern: |
+              "$DOMAIN.ml:$PORT"
+          - pattern: |
+              "$DOMAIN.cf:$PORT"
+          - pattern: |
+              "$DOMAIN.cc:$PORT"
+          - pattern: |
+              'malicious-$X'
+          - pattern: |
+              'evil-$X'
+          - pattern: |
+              'backup-$X'
+    message: Detected suspicious domain patterns often used in malware
+    languages: [javascript, typescript] 
+    severity: ERROR
+    metadata:
+      category: security
+      subcategory: malware
+      confidence: HIGH
+      impact: HIGH
+      technology: [npm, javascript]
+      references:
+        - https://attack.mitre.org/techniques/T1071/
+      cwe: "CWE-506: Embedded Malicious Code"
+
+  - id: persistence-mechanisms
+    patterns:
+      - pattern-either:
+          - pattern: |
+              persistence_methods: [...]
+          - pattern: |
+              "persistence_methods": [...]
+          - pattern: |
+              ['crontab', ...]
+          - pattern: |
+              ['systemd', ...]
+          - pattern: |
+              ['registry', ...]
+          - pattern: |
+              ['startup', ...]
+    message: Detected persistence mechanism configuration
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      category: security
+      subcategory: malware
+      confidence: HIGH
+      impact: HIGH
+      technology: [npm, javascript]
+      references:
+        - https://attack.mitre.org/techniques/T1053/
+      cwe: "CWE-506: Embedded Malicious Code"

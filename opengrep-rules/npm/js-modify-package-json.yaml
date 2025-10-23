@@ -1,0 +1,75 @@
+rules:
+  - id: js-modify-package-json
+    languages: [javascript]
+    options:
+      symbolic_propagation: true
+    message: "Change of dependencies, scripts or other information in the package.json file, e.g., to remove traces at the end of a malicious install hook"
+    severity: WARNING
+    patterns:
+      # package.json files are being read
+      - pattern: |
+          $X = JSON.parse(fs.readFileSync(...))
+          ...
+          fs.writeFileSync(..., JSON.stringify($X, ...))
+      - pattern-either:
+        - patterns:
+          - pattern-either:
+            # Check for code that modifies the dependencies object to add an unknown dependency
+            - pattern-inside: |
+                $X.dependencies.$VAR = ...
+            - pattern-inside: |
+                $X.dependencies[$VAR] = ...
+            # Check for code that modifies the peerDependencies object to add an unknown dependency
+            - pattern-inside: |
+                $X.peerDependencies.$VAR = ...
+            - pattern-inside: |
+                $X.peerDependencies[$VAR] = ...
+            # Check for code that modifies the devDependencies object to add an unknown devDependency
+            - pattern-inside: |
+                $X.devDependencies.$VAR = ...
+            - pattern-inside: |
+                $X.devDependencies[$VAR] = ...
+        # Ignore well-known package.json file paths
+          - pattern-either:
+              # Git dependency URL
+            - pattern-regex: (?i)\".*(git\+ssh|https?|ssh):\/\/.*\"
+              # GitHub dependency
+            - pattern-regex: (?i)\s*"[\w\-]+\/[\w\-]+.*"?$
+        # Check for code that modifies the bin alias object
+        - patterns:
+          - pattern-either:
+            - pattern: |
+                $X.bin.$VAR = $X.bin.$NVAR
+            - pattern: |
+                $X.bin[$VAR] = ...
+        # Check for code that modifies the author information
+        - patterns:
+          - pattern-either:
+            - pattern: |
+                $X.author = ...
+            - pattern: |
+                $X.author[$VAR] = ...
+            - pattern: |
+                $X.author.$VAR = ...
+        # Check for code that modifies the main file
+        - patterns:
+            - pattern: |
+                $X.main = ...
+        # Check for code that modifies the script file
+        - patterns:
+          - pattern-either:
+            - pattern: |
+                $X.scripts[$VAR] = ...
+            - pattern: |
+                $X.scripts.$VAR = ...
+    metadata:
+      version: latest
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-tags:
+        - ANALYTICS_INFO
+      endor-category: malware-detection
+      likelihood: LOW
+      impact: MEDIUM
+      confidence: MEDIUM
+

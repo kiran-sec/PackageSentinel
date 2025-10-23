@@ -1,0 +1,38 @@
+rules:
+  - id: js-serversideinjection-functions
+    languages:
+      - js
+    options:
+      symbolic_propagation: true
+    message: This pattern is performing server side javascript injection by using either of the eval/setTimeout/setInterval functions
+    mode: taint
+    pattern-sinks:
+      - pattern: eval(...)
+      - pattern: setInterval(...)
+      - pattern: setTimeout(...)
+      - pattern: child_process.exec(...)
+    pattern-sources:
+       # Using Sockets 
+      - pattern: socket.$FUN(...)
+        # Using the Fetch API
+      - pattern: fetch(...).$FUN(...)
+       # Using the XMLHttpRequest (XHR) object:
+      - pattern: |
+                  $X = new XMLHttpRequest()
+                  ...
+                  $X.$FUN =...
+        # Using the Axios library
+      - pattern: axios.$FUN(...).then(...)
+      - pattern: express().$FUN(...)
+
+    metadata:
+      version: latest
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      endor-attack-examples:
+        - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/npm/tensorplow/1.0.0
+        - https://www.cyberpunk.rs/server-side-javascript-injection-with-nodexp-usage-example-ssji-metasploit
+      references:
+        - https://www.npmjs.com/advisories/910
+      endor-category: malware-detection
+      confidence: LOW
+    severity: INFO

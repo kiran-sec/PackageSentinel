@@ -1,0 +1,223 @@
+rules:
+  - id: npm-prototype-pollution
+    patterns:
+      - pattern-either:
+          # Direct prototype manipulation
+          - pattern: |
+              Object.prototype.$PROP = $VALUE
+          - pattern: |
+              Function.prototype.$PROP = $VALUE
+          - pattern: |
+              Array.prototype.$PROP = $VALUE
+          # Constructor manipulation
+          - pattern: |
+              $OBJ.constructor.prototype.$PROP = $VALUE
+          # __proto__ manipulation
+          - pattern: |
+              $OBJ.__proto__.$PROP = $VALUE
+          - pattern: |
+              $OBJ["__proto__"].$PROP = $VALUE
+          # Recursive property assignment
+          - patterns:
+              - pattern: |
+                  for ($KEY in $OBJ) {
+                      ...
+                      $TARGET[$KEY] = $OBJ[$KEY]
+                      ...
+                  }
+              - pattern-not: |
+                  if ($KEY === "__proto__") continue
+    message: Prototype pollution vulnerability detected - potential application compromise
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: HIGH
+      description: "Detects prototype pollution attacks where malicious code modifies JavaScript object prototypes to inject properties into all objects, potentially leading to application compromise, authentication bypass, or remote code execution. This vulnerability is particularly dangerous in Node.js applications and can affect the entire application runtime. This rule specifically targets JavaScript/Node.js environments and npm packages."
+      attack_vectors:
+        - "Object prototype manipulation"
+        - "Authentication bypass"
+        - "Application logic compromise"
+        - "Remote code execution"
+      references:
+        - "https://attack.mitre.org/techniques/T1055/"
+        - "https://portswigger.net/web-security/prototype-pollution"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Object prototype manipulation"
+        - "Authentication bypass"
+
+  - id: npm-environment-manipulation
+    patterns:
+      - pattern-either:
+          # PATH manipulation
+          - pattern: |
+              process.env.PATH = $NEWPATH
+          - pattern: |
+              process.env["PATH"] = $NEWPATH
+          # LD_PRELOAD injection (Linux)
+          - pattern: |
+              process.env.LD_PRELOAD = $LIB
+          - pattern: |
+              process.env["LD_PRELOAD"] = $LIB
+          # Node module path manipulation
+          - pattern: |
+              process.env.NODE_PATH = $PATH
+          - pattern: |
+              process.env.NODE_OPTIONS = $OPTIONS
+          # Shell configuration manipulation
+          - pattern: |
+              fs.appendFileSync(os.homedir() + "/.bashrc", $PAYLOAD)
+          - pattern: |
+              fs.writeFileSync(os.homedir() + "/.profile", $PAYLOAD)
+          # Registry manipulation (Windows)
+          - pattern: |
+              exec("reg add HKCU\\$KEY /v $VALUE /d $DATA")
+    message: Environment manipulation detected - potential persistence mechanism
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: HIGH
+      description: "Detects environment variable manipulation and system configuration changes that may establish persistence, modify execution flow, or compromise system integrity. These techniques allow malware to influence how applications load libraries, execute code, or access system resources, potentially leading to privilege escalation or persistent access. This rule specifically targets JavaScript/Node.js environments and npm packages."
+      attack_vectors:
+        - "PATH hijacking"
+        - "Library preloading attacks"
+        - "Shell configuration tampering"
+        - "Registry manipulation"
+      references:
+        - "https://attack.mitre.org/techniques/T1574/"
+        - "https://attack.mitre.org/techniques/T1547/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "PATH hijacking"
+        - "Library preloading attacks"
+
+  - id: npm-webassembly-exploitation
+    patterns:
+      - pattern-either:
+          # WebAssembly instantiation with suspicious sources
+          - pattern: |
+              WebAssembly.instantiate($BYTES, $IMPORTS)
+          - pattern: |
+              WebAssembly.instantiateStreaming($RESPONSE, $IMPORTS)
+          # WebAssembly compilation
+          - pattern: |
+              WebAssembly.compile($BYTES)
+          - pattern: |
+              WebAssembly.compileStreaming($RESPONSE)
+          # Dynamic WASM loading
+          - pattern: |
+              fetch($URL).then(response => WebAssembly.instantiateStreaming(response))
+          # Memory manipulation through WASM
+          - patterns:
+              - pattern: |
+                  const $WASM = await WebAssembly.instantiate(...)
+              - pattern: |
+                  $WASM.instance.exports.$FUNC(...)
+    message: WebAssembly exploitation detected - potential native code execution
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      description: "Detects WebAssembly (WASM) usage patterns that may indicate exploitation of native code execution capabilities, cryptojacking operations, or advanced evasion techniques. WebAssembly can be used by malware to execute compiled code at near-native speeds, perform intensive cryptographic operations, or evade JavaScript-based detection mechanisms. This rule specifically targets JavaScript/Node.js environments and npm packages."
+      attack_vectors:
+        - "Native code execution"
+        - "Cryptographic operations"
+        - "Performance-intensive malware"
+        - "Detection evasion"
+      references:
+        - "https://attack.mitre.org/techniques/T1055/"
+        - "https://attack.mitre.org/techniques/T1027/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Native code execution"
+        - "Cryptographic operations"
+
+  - id: npm-electron-exploitation
+    patterns:
+      - pattern-either:
+          # Node integration exploitation
+          - pattern: |
+              webPreferences: { nodeIntegration: true }
+          - pattern: |
+              webPreferences: { contextIsolation: false }
+          # Remote module access
+          - pattern: |
+              require("@electron/remote")
+          - pattern: |
+              remote.require($MODULE)
+          # Shell execution from renderer
+          - pattern: |
+              shell.openExternal($URL)
+          - pattern: |
+              shell.openPath($PATH)
+          # IPC abuse
+          - pattern: |
+              ipcRenderer.invoke($CHANNEL, $MALICIOUS_DATA)
+          - pattern: |
+              ipcMain.handle($CHANNEL, ($EVENT, $DATA) => { exec($DATA) })
+    message: Electron security bypass detected - potential application escape
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: HIGH
+      description: "Detects Electron security bypass patterns including disabled security features (node integration, context isolation), remote module abuse, shell execution from renderer processes, and IPC channel exploitation. These patterns can lead to application sandbox escape, arbitrary code execution, and system compromise in Electron applications. This rule specifically targets JavaScript/Node.js environments and npm packages."
+      attack_vectors:
+        - "Node integration abuse"
+        - "Context isolation bypass"
+        - "Shell command execution"
+        - "IPC channel exploitation"
+      references:
+        - "https://attack.mitre.org/techniques/T1055/"
+        - "https://www.electronjs.org/docs/latest/tutorial/security"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Node integration abuse"
+        - "Context isolation bypass"
+
+  - id: npm-service-worker-abuse
+    patterns:
+      - pattern-either:
+          # Service worker registration
+          - pattern: |
+              navigator.serviceWorker.register($URL)
+          # Background script execution
+          - pattern: |
+              self.addEventListener('message', $HANDLER)
+          - pattern: |
+              self.addEventListener('fetch', $HANDLER)
+          # Cache manipulation
+          - pattern: |
+              caches.open($NAME).then(cache => cache.addAll($URLS))
+          # Persistent background execution
+          - pattern: |
+              self.addEventListener('sync', $HANDLER)
+          - pattern: |
+              self.addEventListener('backgroundfetch', $HANDLER)
+    message: Service worker abuse detected - potential persistent execution
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      description: "Detects service worker abuse patterns that may establish persistent background execution, intercept network requests, manipulate cached resources, or maintain persistence across browser sessions. Service workers can be exploited by malware to perform ongoing malicious activities even when the main application is closed. This rule specifically targets JavaScript/Node.js environments and npm packages."
+      attack_vectors:
+        - "Persistent background execution"
+        - "Network request interception"
+        - "Cache manipulation"
+        - "Cross-session persistence"
+      references:
+        - "https://attack.mitre.org/techniques/T1547/"
+        - "https://attack.mitre.org/techniques/T1055/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Persistent background execution"
+        - "Network request interception"

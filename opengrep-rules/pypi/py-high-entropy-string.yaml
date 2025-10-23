@@ -1,0 +1,32 @@
+rules:
+  - id: py-high-entropy-string
+    patterns:
+      - pattern-either:
+        - pattern: $VAR = $STR
+        - pattern: $VAR = [..., $STR, ...]
+        - pattern: $FUNC(..., $STR, ...)
+        - pattern: $FUNC(..., [..., $STR, ...], ...)
+        - pattern: |
+            {..., $KEY: $STR, ...}
+      - metavariable-analysis:
+          analyzer: entropy
+          metavariable: $STR
+      - metavariable-regex:
+          # Covers string prefixes (if any), single and double quotes, single and multiline strings, slices
+          regex: (?ms)^(b|f|u|r|B|F|U|R)?['\"]{1,3}.{100,}['\"]{1,3}(\[[\d\-:]+\])?$
+          metavariable: $STR
+    message: High-entropy string with more than 100 characters.
+    languages:
+      - python
+    severity: INFO
+    paths:
+      exclude:
+        - "**/package-lock.json"
+    metadata:
+      version: latest
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      endor-tags:
+        - SEMGREP_IGNORE
+      confidence: LOW

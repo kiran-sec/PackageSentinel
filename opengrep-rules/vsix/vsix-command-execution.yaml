@@ -1,0 +1,36 @@
+rules:
+  - id: vsix-command-execution
+    message: Detected command execution in VS Code extension - potential malicious behavior
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $EXEC.exec(...)
+          - pattern: |
+              $EXEC.execSync(...)
+          - pattern: |
+              $EXEC.spawn(...)
+          - pattern: |
+              $EXEC.execFile(...)
+          - pattern: |
+              require('child_process').$METHOD(...)
+          - pattern: |
+              import { $METHOD } from 'child_process'
+    pattern-not-inside:
+      - pattern: |
+          // @ts-ignore
+          $...BODY
+    metadata:
+      category: malware_pattern
+      confidence: MEDIUM
+      impact: HIGH
+      references:
+        - "https://code.visualstudio.com/api/references/vscode-api"
+      cwe:
+        - "CWE-78: OS Command Injection"
+      technology:
+        - vscode
+        - extensions

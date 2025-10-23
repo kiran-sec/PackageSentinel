@@ -1,0 +1,32 @@
+rules:
+  - id: js-data-exfiltration
+    options:
+      symbolic_propagation: true
+    patterns:
+      - patterns:
+        - pattern: |
+            ....setEncoding(...) 
+            ...
+        - pattern: |
+            ...
+            eval(...)
+      - pattern-inside: $X.get(...)
+      - pattern-inside: |
+          $X = require('https') 
+          ...
+    message: Observed pattern that could download malicious code from a remote URL & then executed it using eval function
+    metadata:
+      version: latest
+      confidence: HIGH
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      endor-attack-examples:
+        - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/npm/eslint-config-eslint
+      references:
+        - https://eslint.org/blog/2018/07/postmortem-for-malicious-package-publishes
+      endor-category: malware-detection
+      endor-tags:
+        - ANALYTICS_IMPACT
+    languages:
+      - js
+    severity: ERROR
+

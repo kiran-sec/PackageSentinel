@@ -1,0 +1,19 @@
+rules:
+  - id: java-class-forname-init
+    languages:
+      - java
+    pattern: |
+      Class.forName("...", true, $LOADER);
+    message: Initialization of hard-coded class loaded via custom class loader (malicious code potentially in static initializer)
+    severity: INFO
+    metadata:
+      version: latest
+      confidence: LOW
+      description: "Detects class initialization via custom class loader which may contain malicious code in static initializers that executes immediately upon class loading"
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      references:
+        - https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Class.html#forName(java.lang.String,boolean,java.lang.ClassLoader)
+      endor-attack-examples:
+        - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/mavencentral/com.github.codingandcoding:maven-compiler-plugin/3.9.0

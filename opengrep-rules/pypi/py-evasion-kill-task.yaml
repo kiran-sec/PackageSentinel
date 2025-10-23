@@ -1,0 +1,41 @@
+rules:
+  - id: py-evasion-kill-task
+    languages:
+      - python
+    options:
+      symbolic_propagation: true
+    patterns:
+      # Catch different modules for calling OS processes
+      # Not covered: a mix of those, e.g. subprocess.run and os.system
+      - pattern-either:
+        - pattern: |
+            subprocess.$FUNC(..., $LIST, ...)
+            ...
+            subprocess.$FUNC(..., $KILL, ...)
+        - pattern: |
+            os.$FUNC(..., $LIST, ...)
+            ...
+            os.$FUNC(..., $KILL, ...)
+        - pattern: |
+            popen2.$FUNC(..., $LIST, ...)
+            ...
+            popen2.$FUNC(..., $KILL, ...)
+      # The regex is necessary to catch strings also if they have prefixes (b, f, u, r), slices or % expressions
+      - metavariable-regex:
+          metavariable: $LIST
+          regex: (?msi)^(b|f|u|r|B|F|U|R)?['\"]{1,3}.*tasklist.*['\"]{1,3}(\[[\d\-:]+\])?.*%?.*$
+      - metavariable-regex:
+          metavariable: $KILL
+          regex: (?msi)^(b|f|u|r|B|F|U|R)?['\"]{1,3}.*taskkill.*['\"]{1,3}(\[[\d\-:]+\])?.*%?.*
+    message: The file enumerates and kills tasks, which is a common technique to evade detection.
+    severity: INFO
+    metadata:
+      version: latest
+      confidence: LOW
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      endor-tags:
+        - ANALYTICS_IGNORE
+      endor-attack-examples:
+        - https://socket.dev/blog/blank-grabber-python-package-steals-info-from-discord-and-telegram

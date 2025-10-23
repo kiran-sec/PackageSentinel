@@ -1,0 +1,39 @@
+rules:
+- id: npm-exec-base64
+  languages:
+  - javascript
+  message: 'This package contains a call to the `eval` function with a `base64` encoded
+    string as argument.
+
+    This is a common method used to hide a malicious payload in a module as static
+    analysis will not decode the
+
+    string.
+
+    '
+  metadata:
+    confidence: LOW
+    description: Identify when a package dynamically executes code through 'eval'
+    endor-category: malware-detection
+    endor-tags:
+    - ANALYTICS_INFO
+    endor-targets:
+    - ENDOR_TARGET_PACKAGE
+    version: latest
+  mode: taint
+  pattern-sinks:
+  - pattern-either:
+    - patterns:
+      - pattern-inside: '$FN = new Function(...)
+
+          ...
+
+          '
+      - pattern: $FN(...)
+    - patterns:
+      - pattern: eval(...)
+  pattern-sources:
+  - pattern-either:
+    - pattern: Buffer.from(...)
+    - pattern: atob(...)
+  severity: INFO

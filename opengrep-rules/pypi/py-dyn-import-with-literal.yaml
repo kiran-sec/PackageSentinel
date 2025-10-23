@@ -1,0 +1,16 @@
+rules:
+  - id: py-dyn-import-with-literal
+    pattern: __import__('...', ...)
+    # Dynamic import via __import__ makes sense if the module name is only known at runtime. If a string literal is used, it is known at development time and the import statement should be used.
+    message: Function __import__ used with string literal, instead of simply using the import statement. This technique has been used to obfuscate malicious code.
+    languages:
+      - python
+    severity: INFO
+    metadata:
+      version: latest
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      confidence: LOW
+      references:
+      - https://peps.python.org/pep-0008/#imports

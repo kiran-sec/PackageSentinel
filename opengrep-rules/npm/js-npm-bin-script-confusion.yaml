@@ -1,0 +1,42 @@
+rules:
+  - id: js-npm-bin-script-confusion
+    languages:
+    - json
+    message: package.json declares bin script that potentially shadows existing commands or tools
+    patterns:
+      - pattern-inside: |
+          "bin": { ... }
+      # Avoid matches in replicated package info below "packages > node_modules/password-prompt/node_modules/which > bin" (cf. sample)
+      - pattern-not-inside: |
+          "packages": { ... }
+      - pattern: |
+          $Y: "$X"
+      - metavariable-pattern:
+          metavariable: $Y
+          pattern-either:
+            # Unix commands from https://en.wikipedia.org/wiki/List_of_Unix_commands
+            - pattern-regex: (?i)^"(admin|alias|ar|asa|at|awk|basename|batch|bc|bg|cal|cat|cd|cflow|chgrp|chmod|chown|cksum|cmp|comm|command|compress|cp|crontab|csplit|ctags|cut|cxref|date|dd|delta|df|diff|dirname|du|echo|ed|env|ex|expand|expr|false|fc|fg|file|find|fold|fort77|fuser|gencat|get|getconf|getopts|grep|hash|head|iconv|id|ipcrm|ipcs|jobs|join|kill|lex|link|ln|locale|localedef|logger|logname|lp|ls|m4|mailx|make|man|mesg|mkdir|mkfifo|more|mv|newgrp|nice|nl|nm|nohup|od|paste|patch|pathchk|pax|pr|printf|prs|ps|pwd|qalter|qdel|qhold|qmove|qmsg|qrerun|qrls|qselect|qsig|qstat|qsub|read|readlink|renice|rm|rmdel|rmdir|sact|sccs|sed|sh|sleep|sort|split|strings|strip|stty|tabs|tail|talk|tee|test|time|touch|tput|tr|true|tsort|tty|type|ulimit|umask|unalias|uname|uncompress|unexpand|unget|uniq|unlink|uucp|uudecode|uuencode|uustat|uux|val|vi|wait|wc|what|who|write|xargs|yacc|zcat)"$
+            # Win commands from https://www.ionos.com/digitalguide/server/know-how/windows-cmd-commands/
+            - pattern-regex: (?i)^"(arp|atmadm|certreq|certutil|change|checknetisolation|chglogon|chgport|chgusr|cmstp|djoin|finger|ftp|getmac|gpresult|gpupdate|hostname|interlnk|intersvr|ipconfig|ipxroute|irftp|iscsicli|klist|ksetup|mount|mrinfo|nbtstat|net|net1|netsh|netstat|nfsadmin|nltest|nslookup|ntsd|pathping|ping|qappsrv|qwinsta|rasautou|rasdial|rcp|rdpsign|rexec|route|rpcinfo|rpcping|rsh|setspn|shadow|showmount|tcmsetup|telnet|tftp|tlntadmn|tracert|tscon|tsdiscon|tskill|tsshutdn|umount|w32tm|waitfor|wecutil|winrm|winrs|wsmanhttpconfig|at|auditpol|backup|bcdboot|bcdedit|bdehdcfg|bootcfg|bootsect|cacls|chkdsk|chkntfs|cmdkey|convert|ctty|dblspace|defrag|diskpart|diskperf|diskraid|dism|dispdiag|dosx|driverquery|drvspace|emm386|esentutl|eventcreate|eventtriggers|fdisk|fltmc|fondue|format|fsutil|hwrcomp|hwrreg|icacls|ktmutil|label|lh|licensingdiag|loadfix|loadhigh|lock|lodctr|logman|manage-bde|mem|memmaker|mode|mofcomp|mountvol|msav|msbackup|mscdex|msd|msiexec|muiunattend|netcfg|ocsetup|pentnt|pkgmgr|pnpunattend|pnputil|power|powercfg|pwlauncher|qprocess|query|quser|reagentc|recimg|reg|regini|register-cimprovider|regsvr32|relog|repair-bde|reset|restore|rwinsta|sc|scanreg|sdbinst|secedit|setver|setx|sfc|smartdrv|sys|systeminfo|tpmvscmgr|tracerpt|typeperf|unformat|unlock|unlodctr|vaultcmd|vol|vsafe|vssadmin|wbadmin|wevtutil|whoami|winmgmt|winsat|wmic|xwizard|append|assoc|attrib|cipher|comp|compact|copy|cscript|del|deltree|diantz|diskcomp|diskcopy|endlocal|erase|exe2bin|expand|extrac32|extract|fc|for|forfiles|ftype|goto|if|makecab|mklink|move|openfiles|recover|ren|rename|replace|robocopy|rsm|setlocal|share|sxstrace|takeown|undelete|verify|where|xcopy|bitsadmin|break|call|cd|chcp|chdir|choice|clip|cls|cmd|color|command|date|debug|dir|doskey|dosshell|echo|edit|edlin|exit|fasthelp|fastopen|find|findstr|forcedos|graftabl|graphics|help|kb16|keyb|logoff|lpq|lpr|md|mkdir|more|msg|nlsfunc|ntbackup|path|pause|popd|print|prompt|pushd|qbasic|rd|rem|rmdir|runas|scandisk|schtasks|set|shift|shutdown|sort|start|subst|taskkill|tasklist|time|timeout|title|tree|type|tzutil|ver)"$
+            # Node-related commands
+            - pattern-regex: (?i)^"(node|npm|npx|pnpm|pnpx|jstest|jest|yarn)"$
+            # Other commands
+            - pattern-regex: (?i)^"(bash|python|python3|which|go|ruby|perl)"$
+    paths:
+      include:
+        - "*/package.json"
+        - "**/package-lock.json"
+        - "*/npm-shrinkwrap.json"
+        - "*/js-npm-bin-script-confusion.json"
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      references:
+      - https://socket.dev/blog/npm-bin-script-confusion
+      - https://develop.secure.software/groundhog-day-npm-package-caught-stealing-browser-passwords
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      endor-tags:
+        - ANALYTICS_INFO
+    severity: WARNING

@@ -1,0 +1,167 @@
+rules:
+  - id: js-atob-usage
+    patterns:
+      - pattern-either:
+          - pattern: atob($STR)
+          - pattern: $VAR.atob($STR)
+          - pattern: window.atob($STR)
+          - pattern: global.atob($STR)
+          - pattern: globalThis.atob($STR)
+    message: Base64 decoding function atob() detected - potential payload decoding
+    languages:
+      - javascript
+      - typescript
+    severity: WARNING
+    metadata:
+      category: suspicious_api
+      confidence: MEDIUM
+      impact: MEDIUM
+      cwe:
+        - "CWE-94: Code Injection"
+        - "CWE-506: Embedded Malicious Code"
+      references:
+        - "https://attack.mitre.org/techniques/T1140/"
+      description: "Detects usage of atob() function for base64 decoding, commonly used by malware to decode obfuscated payloads at runtime."
+      attack_vectors:
+        - "Base64 payload decoding"
+        - "Runtime deobfuscation"
+
+  - id: js-eval-atob-combo
+    patterns:
+      - pattern-either:
+          - pattern: eval(atob($STR))
+          - pattern: eval($VAR.atob($STR))
+          - pattern: eval(window.atob($STR))
+          - pattern: eval(global.atob($STR))
+          - pattern: eval(globalThis.atob($STR))
+          - pattern: Function(atob($STR))
+          - pattern: Function($VAR.atob($STR))
+          - pattern: Function(window.atob($STR))
+          - pattern: new Function(atob($STR))
+          - pattern: new Function($VAR.atob($STR))
+    message: Critical - eval() combined with atob() detected - highly suspicious code execution pattern
+    languages:
+      - javascript
+      - typescript
+    severity: ERROR
+    metadata:
+      category: malware_pattern
+      confidence: HIGH
+      impact: HIGH
+      cwe:
+        - "CWE-94: Code Injection"
+        - "CWE-95: Dynamic Code Evaluation"
+        - "CWE-506: Embedded Malicious Code"
+      references:
+        - "https://attack.mitre.org/techniques/T1140/"
+        - "https://attack.mitre.org/techniques/T1059/"
+      description: "Detects the dangerous combination of eval() with atob() - a classic malware pattern for executing base64-encoded JavaScript payloads. This is extremely suspicious and indicates likely malicious activity."
+      malware_techniques:
+        - "Dynamic code execution"
+        - "Base64 payload execution"
+        - "Runtime deobfuscation"
+
+  - id: js-buffer-from-base64
+    patterns:
+      - pattern-either:
+          - pattern: Buffer.from($STR, 'base64')
+          - pattern: Buffer.from($STR, "base64")
+          - pattern: new Buffer($STR, 'base64')
+          - pattern: new Buffer($STR, "base64")
+    message: Buffer base64 decoding detected - potential binary payload decoding
+    languages:
+      - javascript
+      - typescript
+    severity: WARNING
+    metadata:
+      category: suspicious_api
+      confidence: MEDIUM
+      impact: MEDIUM
+      cwe:
+        - "CWE-506: Embedded Malicious Code"
+      references:
+        - "https://attack.mitre.org/techniques/T1140/"
+      description: "Detects Buffer.from() with base64 encoding parameter, commonly used to decode binary payloads in Node.js malware."
+      attack_vectors:
+        - "Binary payload decoding"
+        - "Executable file reconstruction"
+
+  - id: js-hex-decoding-patterns
+    patterns:
+      - pattern-either:
+          - pattern: Buffer.from($STR, 'hex')
+          - pattern: Buffer.from($STR, "hex")
+          - pattern: new Buffer($STR, 'hex')
+          - pattern: new Buffer($STR, "hex")
+          - pattern: parseInt($STR, 16)
+    message: Hexadecimal decoding pattern detected - potential obfuscated data
+    languages:
+      - javascript
+      - typescript
+    severity: WARNING
+    metadata:
+      category: suspicious_api
+      confidence: MEDIUM
+      impact: MEDIUM
+      cwe:
+        - "CWE-506: Embedded Malicious Code"
+      references:
+        - "https://attack.mitre.org/techniques/T1140/"
+      description: "Detects hexadecimal decoding operations commonly used by malware to decode obfuscated strings or binary data."
+      attack_vectors:
+        - "Hex-encoded payload decoding"
+        - "String obfuscation bypass"
+
+  - id: js-string-fromcharcode-obfuscation
+    patterns:
+      - pattern-either:
+          - pattern: String.fromCharCode($...ARGS)
+          - pattern: String.fromCharCode.apply($OBJ, $ARRAY)
+          - pattern: eval(String.fromCharCode($...ARGS))
+          - pattern: Function(String.fromCharCode($...ARGS))
+    message: String.fromCharCode() pattern detected - potential character code obfuscation
+    languages:
+      - javascript
+      - typescript
+    severity: WARNING
+    metadata:
+      category: obfuscation
+      confidence: MEDIUM
+      impact: MEDIUM
+      cwe:
+        - "CWE-94: Code Injection"
+        - "CWE-506: Embedded Malicious Code"
+      references:
+        - "https://attack.mitre.org/techniques/T1027/"
+      description: "Detects String.fromCharCode() usage, commonly employed by malware to construct strings from character codes to evade static analysis."
+      attack_vectors:
+        - "Character code obfuscation"
+        - "Dynamic string construction"
+
+  - id: js-unescape-decoding
+    patterns:
+      - pattern-either:
+          - pattern: unescape($STR)
+          - pattern: decodeURI($STR)
+          - pattern: decodeURIComponent($STR)
+          - pattern: eval(unescape($STR))
+          - pattern: eval(decodeURI($STR))
+          - pattern: eval(decodeURIComponent($STR))
+    message: URL/Unicode decoding function detected - potential encoded payload
+    languages:
+      - javascript
+      - typescript
+    severity: WARNING
+    metadata:
+      category: suspicious_api
+      confidence: MEDIUM
+      impact: MEDIUM
+      cwe:
+        - "CWE-94: Code Injection"
+        - "CWE-506: Embedded Malicious Code"
+      references:
+        - "https://attack.mitre.org/techniques/T1140/"
+      description: "Detects URL and Unicode decoding functions often used by malware to decode percent-encoded or Unicode-escaped payloads."
+      attack_vectors:
+        - "URL-encoded payload decoding"
+        - "Unicode escape sequence processing"

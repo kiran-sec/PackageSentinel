@@ -1,0 +1,82 @@
+rules:
+  - id: js-anti-analysis-evasion
+    patterns:
+      - pattern-either:
+        # Debugger evasion
+        - pattern: |
+            if (typeof $DEBUGGER !== 'undefined') {
+              ...
+            }
+        - pattern: |
+            if ($DEBUGGER.isAttached) {
+              ...
+            }
+        - pattern: |
+            setInterval(function() {
+              debugger;
+            }, $TIME);
+        # VM/Sandbox detection
+        - pattern: |
+            if (navigator.webdriver) {
+              ...
+            }
+        - pattern: |
+            if (window.phantom || window._phantom) {
+              ...
+            }
+        - pattern: |
+            if (window.callPhantom) {
+              ...
+            }
+        - pattern: |
+            if (navigator.userAgent.includes($AGENT)) {
+              ...
+            }
+        # Runtime environment detection
+        - pattern: |
+            if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+              ...
+            }
+        - pattern: |
+            if (typeof window === 'undefined') {
+              return;
+            }
+        # Time-based evasion
+        - pattern: |
+            setTimeout($FUNC, $DELAY)
+        - pattern: |
+            $VAR = Date.now();
+            ...
+            if (Date.now() - $VAR < $THRESHOLD) {
+              ...
+            }
+        # Anti-static analysis
+        - pattern: |
+            Function.constructor($STRING)()
+        - pattern: |
+            eval(String.fromCharCode(...$CODES))
+        - pattern: |
+            eval(atob($B64))
+        - pattern: |
+            new Function(atob($B64))()
+      - metavariable-regex:
+          regex: (?i).*(headless|chrome|phantom|selenium|webdriver|puppeteer|chromedriver).*
+          metavariable: $AGENT
+      - metavariable-regex:
+          regex: (?i)(debugger|devtools|inspector|debug)
+          metavariable: $DEBUGGER
+    message: Anti-analysis and evasion techniques detected - malware attempting to avoid detection
+    languages:
+      - javascript
+      - typescript
+    severity: HIGH
+    metadata:
+      version: latest
+      endor-category: malware-detection
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      confidence: HIGH
+      malware-type: evasion
+      attack-vector: anti-analysis
+      references:
+        - "https://attack.mitre.org/techniques/T1497/"
+        - "https://attack.mitre.org/techniques/T1622/"

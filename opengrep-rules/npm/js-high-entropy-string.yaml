@@ -1,0 +1,46 @@
+rules:
+  - id: js-high-entropy-string
+    options:
+      symbolic_propagation: true
+    patterns:
+    - pattern-either:
+      # Match high-entropy strings assigned to variables or array elements
+      - pattern: var $VAR = $STR
+      - pattern: $VAR = [..., $STR, ...]
+      - pattern: const $VAR = $STR
+      - pattern: |
+            $OBJ = {..., $KEY: $STR, ...}
+      - pattern: |
+            $OBJ = {..., $KEY: [..., $STR, ...], ...}
+      # Match high-entropy strings passed as arguments to functions
+      - pattern: $FUNC(..., $STR, ...)
+      - pattern: $FUNC(..., [..., $STR, ...], ...)
+    - metavariable-analysis:
+        analyzer: entropy
+        metavariable: $STR
+    - metavariable-regex:
+        regex: (?ms)^(b|f|u|r|B|F|U|R)?[\"\'].{50,}[\"\']$
+        metavariable: $STR
+    message: High-entropy string with more than 50 chars observed
+    languages:
+      - javascript
+    severity: INFO
+    paths:
+      exclude:
+        - "**/package-lock.json"
+    metadata:
+      version: latest
+      endor-category: malware-detection
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      endor-tags:
+        - SEMGREP_IGNORE
+      confidence: LOW
+      description: "Detects high-entropy strings longer than 50 characters that may indicate obfuscated code, encrypted payloads, base64-encoded content, or other data hiding techniques commonly used in malware to evade detection. High-entropy strings are often used to hide malicious commands, URLs, or configuration data. This rule specifically targets JavaScript/Node.js environments and npm packages."
+      attack_vectors:
+        - "Base64-encoded malicious payloads"
+        - "Encrypted configuration data"
+        - "Obfuscated command strings"
+        - "Hidden URLs or domain names"
+      references:
+        - "https://attack.mitre.org/techniques/T1027/"
+        - "https://attack.mitre.org/techniques/T1140/"

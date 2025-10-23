@@ -1,0 +1,59 @@
+rules:
+- id: gen-invisible-char
+  patterns:
+  - pattern-either:
+      - pattern-regex: "\xAD" # Soft hyphen
+      - pattern-regex: "\u00A0" # Non-breaking space
+      - pattern-regex: "\u180E" # Mongolian vowel separator
+      - pattern-regex: "\u2000"
+      - pattern-regex: "[\u2001-\u2009]"
+      - pattern-regex: "[\u200A-\u200D]"
+      - pattern-regex: "[\x01-\x08]"
+      - pattern-regex: "[\u206A-\u206F]"
+          # En quad, em quad, en space, em space, three-per-em space, four-per-em space, six-per-em space, figure space, punctuation space, zero width space
+      - pattern-regex: "\u202F" # Narrow no-break space
+      - pattern-regex: "\u205F" # Medium mathematical space
+      - pattern-regex: "\u3000" # Ideographic space
+      - pattern-regex: "\uFEFF" # Zero-width non-breaking space
+      - pattern-regex: "\uFFF9" # Interlinear annotation anchor
+      - pattern-regex: "\uFFFA" # Interlinear annotation separator
+      - pattern-regex: "\uFFFB" # Interlinear annotation terminator
+  # Exclude single line comments in bash and Python (if preceeded by space only)
+  - pattern-not-regex: (?:^\s*\#(?:.*)$)
+  # Exclude single line comments in Go, kotlin, C, C#, Javascript and Java (if preceeded by space only)
+  - pattern-not-regex: (?:^\s*\/\/(?:.*)$)
+  message: This code contains invisible characters.
+  metadata:
+    version: latest
+    confidence: LOW
+    description: "Detects invisible Unicode characters that may be used for steganography, code obfuscation, or hiding malicious content within seemingly normal code"
+    references:
+    - https://www.fileformat.info/info/unicode/char/200b/charset_support.htm
+    - https://en.wikipedia.org/wiki/Zero-width_space#:~:text=The%20zero%2Dwidth%20space%20character,%3B%20or%20%E2%80%8B%20.
+    - https://invisible-characters.com/
+    technology:
+    - unicode
+    endor-targets:
+    - ENDOR_TARGET_PACKAGE
+    endor-category: malware-detection
+    endor-tags:
+    - SEMGREP_IGNORE
+  languages:
+  - bash
+  - c
+  - csharp
+  - go
+  - java
+  - javascript
+  - kotlin
+  - lua
+  - ocaml
+  - php
+  - python
+  - ruby
+  - rust
+  - scala
+  - sh
+  - typescript
+  - yaml
+  severity: INFO

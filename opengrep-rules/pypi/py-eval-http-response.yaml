@@ -1,0 +1,49 @@
+rules:
+  - id: py-eval-http-response
+    languages:
+      - python
+    mode: taint
+    options:
+      symbolic_propagation: true
+
+    # HTTP response flows into...
+    pattern-sources:
+
+      # Well-known libraries
+      - pattern: requests.$METH(...)
+      - pattern: urllib2.urlopen(...)
+      - pattern: six.moves.urllib.request.urlopen(...)
+
+      ### From py-network
+      - pattern: urllib.urlopen(...)
+      - pattern: urllib.urlretrieve(...)
+      - pattern: urllib.request.urlopen(...)
+      - pattern: $HDL.http_open(...)
+      - pattern: $HDL.https_open(...)
+      - pattern: $HDL.ftp_open(...)
+      - pattern: urllib.request.urlretrieve(...)
+
+    # ... exec or eval.
+    pattern-sinks:
+      - pattern-either:
+
+        ### From py-dyn-prg
+        - pattern: compile(...)
+        - pattern: eval(...)
+        - pattern: exec(...)
+
+        # Same via builtins (not covered by previous patterns)
+        - pattern: __import__('builtins').compile(...)
+        - pattern: __import__('builtins').eval(...)
+        - pattern: __import__('builtins').exec(...)
+
+    message: The response of an HTTP request is dynamically evaluated via eval, exec or compile.
+    severity: WARNING
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      endor-tags:
+        - ANALYTICS_INFO

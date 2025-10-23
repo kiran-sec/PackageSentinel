@@ -1,0 +1,105 @@
+rules:
+  - id: js-cryptojacking-mining
+    pattern-either:
+      # Mining library references with mining names
+      - patterns:
+        - pattern: |
+            require($MINER)
+        - metavariable-regex:
+            regex: (?i).*(coinhive|crypto-night|xmrig|minergate|webminerpool|coin-hive|crypto-loot|jsecoin|deepminer|papoto|authedmine).*
+            metavariable: $MINER
+      - patterns:
+        - pattern: |
+            import $VAR from $MINER
+        - metavariable-regex:
+            regex: (?i).*(coinhive|crypto-night|xmrig|minergate|webminerpool|coin-hive|crypto-loot|jsecoin|deepminer|papoto|authedmine).*
+            metavariable: $MINER
+      # Mining configuration objects with mining-related keys
+      - patterns:
+        - pattern: |
+            $CONFIG = {
+              ...,
+              $KEY: $VALUE,
+              ...
+            }
+        - metavariable-regex:
+            regex: (?i)(poolAddress|walletAddress|mining|miner|wallet|algorithm|cryptonight|scrypt|sha256).*
+            metavariable: $KEY
+      # Mining pool addresses
+      - patterns:
+        - pattern: |
+            $VAR = $URL
+        - metavariable-regex:
+            regex: (?i).*(pool\..*\.com|stratum\+tcp|mining|minergate|xmr-pool|supportxmr).*
+            metavariable: $URL
+      # Wallet addresses (long alphanumeric strings typical of crypto wallets)
+      - patterns:
+        - pattern: |
+            $VAR = $WALLET
+        - metavariable-regex:
+            regex: ^[0-9a-zA-Z]{40,}$
+            metavariable: $WALLET
+      # Mining function calls
+      - pattern: |
+          $OBJ.start()
+      - pattern: |
+          $OBJ.mine()
+      - pattern: |
+          $OBJ.startMining()
+      - patterns:
+        - pattern: |
+            new $MINER($CONFIG)
+        - metavariable-regex:
+            regex: (?i).*(miner|crypto|hash|worker).*
+            metavariable: $MINER
+      # CPU detection for mining
+      - pattern: |
+          os.cpus().length
+      - pattern: |
+          os.cpus()
+      # Worker threads for mining
+      - pattern: |
+          new Worker($URL)
+      - pattern: |
+          new SharedWorker($URL)
+      # WebAssembly instantiation (common for crypto miners)
+      - pattern: |
+          WebAssembly.instantiate($BYTES, ...)
+      - pattern: |
+          WebAssembly.instantiateStreaming($RESPONSE, ...)
+      # Crypto hash operations in loops
+      - patterns:
+        - pattern: |
+            while ($COND) {
+              ...
+              crypto.createHash($ALG).update($DATA).digest($FORMAT);
+              ...
+            }
+        - metavariable-regex:
+            regex: (?i)(sha256|sha512|scrypt|cryptonight|argon2)
+            metavariable: $ALG
+      - patterns:
+        - pattern: |
+            for ($INIT; $COND; $INC) {
+              ...
+              crypto.createHash($ALG);
+              ...
+            }
+        - metavariable-regex:
+            regex: (?i)(sha256|sha512|scrypt|cryptonight|argon2)
+            metavariable: $ALG
+    message: Cryptocurrency mining code detected - potential cryptojacking malware
+    languages:
+      - javascript
+      - typescript
+    severity: ERROR
+    metadata:
+      version: latest
+      endor-category: malware-detection
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      confidence: HIGH
+      malware-type: cryptojacking
+      attack-vector: resource-hijacking
+      references:
+        - "https://attack.mitre.org/techniques/T1496/"
+        - "https://blog.malwarebytes.com/cybercrime/2017/10/coinhive-drive-by-mining/"

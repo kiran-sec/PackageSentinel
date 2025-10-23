@@ -1,0 +1,31 @@
+rules:
+  - id: py-arithm-expr-with-literals-in-slice
+    pattern-either:
+      # [expr]
+      - patterns:
+        - pattern-either:
+          - pattern: |
+              "..."[$I]
+          - pattern: |
+              $FUNC()[$I]
+          - pattern: |
+              $VAR[$I]
+        - metavariable-regex:
+            metavariable: $I
+            # All operators except +, which is commonly used
+            regex: ^\s*(-|~)?\d+\s*(-|\*|\*\*|//|%|<<|>>|&|\||\^)\s*(-|~)?\d+\s*$
+      # TODO: [expr:expr]
+    message: An arithmetic expression only comprised of literals is used to slice a string. This can be an indicator of the obfuscation technique string sampling.
+    languages:
+      - python
+    severity: INFO
+    metadata:
+      version: latest
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      confidence: LOW
+      references:
+      - https://www.w3schools.com/python/python_operators.asp
+      endor-attack-examples:
+      - https://medium.com/checkmarx-security/17-malicious-python-packages-targeting-selenium-users-to-steal-crypto-8d24628ec656

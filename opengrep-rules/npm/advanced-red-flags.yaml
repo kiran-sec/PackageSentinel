@@ -1,0 +1,244 @@
+rules:
+  - id: npm-suspicious-install-behavior
+    patterns:
+      - pattern-either:
+          # Silent execution with output redirection
+          - pattern: |
+              exec($CMD + " > /dev/null 2>&1")
+          - pattern: |
+              spawn($CMD, [..., "> /dev/null", "2>&1"])
+          # Background process execution
+          - pattern: |
+              exec($CMD + " &")
+          - pattern: |
+              spawn($CMD + " &")
+          # System modification during install
+          - pattern: |
+              exec("curl $URL | bash")
+          - pattern: |
+              exec("wget $URL -O- | sh")
+          # Registry/system file modification
+          - pattern: |
+              fs.writeFileSync("/etc/$FILE", ...)
+          - pattern: |
+              fs.writeFileSync("~/.bashrc", ...)
+          - pattern: |
+              fs.writeFileSync("~/.profile", ...)
+    message: Suspicious install-time behavior detected - potential malware installation
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: HIGH
+      description: "Detects suspicious behavior during package installation including silent command execution, background processes, system file modifications, and remote script execution. These patterns are commonly used by malware to establish persistence, modify system configuration, or download additional payloads during the installation process. This rule specifically targets JavaScript/Node.js environments and npm packages."
+      attack_vectors:
+        - "Silent malware installation"
+        - "System configuration tampering"
+        - "Remote script execution"
+        - "Persistence mechanism setup"
+      references:
+        - "https://attack.mitre.org/techniques/T1059/"
+        - "https://attack.mitre.org/techniques/T1543/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Silent malware installation"
+        - "System configuration tampering"
+
+  - id: npm-credential-harvesting
+    patterns:
+      - pattern-either:
+          # Environment variable collection
+          - pattern: |
+              process.env['$SECRET']
+          - pattern: |
+              process.env.$SECRET
+          # File-based credential access
+          - pattern: |
+              fs.readFileSync("~/.ssh/$KEY")
+          - pattern: |
+              fs.readFileSync("~/.aws/$CREDS")
+          - pattern: |
+              fs.readFileSync("~/.npmrc")
+          - pattern: |
+              fs.readFileSync("~/.gitconfig")
+          # Browser credential access
+          - pattern: |
+              fs.readFileSync($PATH + "Cookies")
+          - pattern: |
+              fs.readFileSync($PATH + "Login Data")
+          # Network credential transmission
+          - pattern: |
+              https.post($URL, { credentials: $CREDS })
+          - pattern: |
+              fetch($URL, { body: JSON.stringify($CREDS) })
+      - metavariable-regex:
+          metavariable: $SECRET
+          regex: (?i)(password|passwd|secret|key|token|auth|credential|api_key|access_key|private_key)
+    message: Credential harvesting behavior detected - potential data theft
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: HIGH
+      description: "Detects credential harvesting patterns including environment variable collection, SSH key access, browser credential theft, and unauthorized transmission of sensitive authentication data. This behavior is commonly used by malware to steal user credentials, API keys, and authentication tokens for unauthorized access or lateral movement. This rule specifically targets JavaScript/Node.js environments and npm packages."
+      attack_vectors:
+        - "Environment variable theft"
+        - "SSH key harvesting"
+        - "Browser credential theft"
+        - "API key exfiltration"
+      references:
+        - "https://attack.mitre.org/techniques/T1552/"
+        - "https://attack.mitre.org/techniques/T1555/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Environment variable theft"
+        - "SSH key harvesting"
+
+  - id: npm-system-reconnaissance
+    patterns:
+      - pattern-either:
+          # System information gathering
+          - pattern: |
+              os.platform()
+          - pattern: |
+              os.arch()
+          - pattern: |
+              os.cpus()
+          - pattern: |
+              os.networkInterfaces()
+          # Process enumeration
+          - pattern: |
+              exec("ps aux")
+          - pattern: |
+              exec("tasklist")
+          - pattern: |
+              exec("netstat -an")
+          # User information gathering
+          - pattern: |
+              os.userInfo()
+          - pattern: |
+              process.env.USER
+          - pattern: |
+              process.env.USERNAME
+          # Directory enumeration
+          - pattern: |
+              fs.readdirSync("/")
+          - pattern: |
+              fs.readdirSync("/etc")
+          - pattern: |
+              fs.readdirSync("C:\\")
+      - patterns:
+          - pattern-either:
+              - pattern: |
+                  $INFO = os.$METHOD()
+              - pattern: |
+                  $INFO = process.env.$VAR
+          - pattern: |
+              https.post($URL, { info: $INFO })
+    message: System reconnaissance activity detected - potential malware profiling
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      description: "Detects system reconnaissance activities including hardware profiling, network enumeration, process discovery, and user information gathering followed by data transmission. This behavior is commonly used by malware to profile victim systems, identify valuable targets, assess security controls, and customize attack strategies. This rule specifically targets JavaScript/Node.js environments and npm packages."
+      attack_vectors:
+        - "System profiling"
+        - "Network enumeration"
+        - "Process discovery"
+        - "User information gathering"
+      references:
+        - "https://attack.mitre.org/techniques/T1082/"
+        - "https://attack.mitre.org/techniques/T1057/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "System profiling"
+        - "Network enumeration"
+
+  - id: npm-fileless-malware
+    patterns:
+      - pattern-either:
+          # In-memory code execution
+          - pattern: |
+              eval(Buffer.from($DATA, 'base64').toString())
+          - pattern: |
+              Function(Buffer.from($DATA, 'base64').toString())()
+          # Dynamic module loading
+          - pattern: |
+              require('vm').runInThisContext($CODE)
+          - pattern: |
+              require('vm').runInNewContext($CODE)
+          # Memory-resident payloads
+          - pattern: |
+              setInterval(eval, $INTERVAL, $PAYLOAD)
+          - pattern: |
+              setTimeout(Function($PAYLOAD), $DELAY)
+          # Registry-less execution
+          - pattern: |
+              child_process.exec($CMD, { stdio: 'pipe' })
+    message: Fileless malware technique detected - memory-resident threat
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: HIGH
+      description: "Detects fileless malware techniques including in-memory code execution, dynamic module loading, and registry-less execution patterns. These techniques allow malware to operate entirely in memory without writing files to disk, making detection and forensic analysis more difficult. This rule specifically targets JavaScript/Node.js environments and npm packages."
+      attack_vectors:
+        - "In-memory code execution"
+        - "Dynamic payload loading"
+        - "Registry-less persistence"
+        - "Memory-resident payloads"
+      references:
+        - "https://attack.mitre.org/techniques/T1055/"
+        - "https://attack.mitre.org/techniques/T1620/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "In-memory code execution"
+        - "Dynamic payload loading"
+
+  - id: npm-supply-chain-indicators
+    patterns:
+      - pattern-either:
+          # Package metadata manipulation
+          - pattern: |
+              package.scripts.postinstall = $SCRIPT
+          - pattern: |
+              package.scripts.preinstall = $SCRIPT
+          # Dependency confusion indicators
+          - pattern: |
+              require($PKG)
+          - pattern: |
+              import $VAR from $PKG
+          # Typosquatting patterns
+          - pattern: |
+              "name": "$NAME"
+      - metavariable-regex:
+          metavariable: $PKG
+          regex: (?i)(.*-internal|.*-corp|.*-company|.*-org|.*-private|.*test|.*-test|test.*|debug.*|.*debug|temp.*|.*temp)
+      - metavariable-regex:
+          metavariable: $NAME
+          regex: (?i)(react|angular|vue|jquery|lodash|express|babel|webpack|npm|node|axios|moment).*typo
+    message: Supply chain attack indicators detected - potential package compromise
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      description: "Detects supply chain attack indicators including dependency confusion attempts, typosquatting patterns, and suspicious package metadata manipulation. These techniques are used to compromise software supply chains by introducing malicious packages that mimic legitimate ones or exploit internal naming conventions. This rule specifically targets JavaScript/Node.js environments and npm packages."
+      attack_vectors:
+        - "Dependency confusion attacks"
+        - "Typosquatting campaigns"
+        - "Package metadata manipulation"
+        - "Internal package impersonation"
+      references:
+        - "https://attack.mitre.org/techniques/T1195/"
+        - "https://attack.mitre.org/techniques/T1199/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Dependency confusion attacks"
+        - "Typosquatting campaigns"

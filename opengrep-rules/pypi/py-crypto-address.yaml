@@ -1,0 +1,21 @@
+rules:
+  - id: py-crypto-address
+    languages:
+      - python
+    pattern-either:
+      - pattern: |
+          $DATA = pyperclip.paste()
+          ...
+          if re.search('^[13][a-km-zA-HJ-NP-Z1-9](25,34}$', $DATA):
+            ...
+            pyperclip.copy(...)
+    message: Replace crypto address in clipboard
+    severity: WARNING
+    metadata:
+      version: latest
+      confidence: LOW
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      endor-attack-examples:
+        - https://www.bleepingcomputer.com/news/security/hundreds-of-malicious-python-packages-found-stealing-sensitive-data/

@@ -1,0 +1,159 @@
+rules:
+  - id: generic-non-visible-chars-in-strings
+    options:
+      symbolic_propagation: true
+    patterns:
+      - pattern-either:
+          - pattern: $VAR = $STR
+          - pattern: $FUNC(..., $STR, ...)
+          - pattern: |
+              {..., $KEY: $STR, ...}
+      - metavariable-regex:
+          # Matches strings with non-printable characters (excludes normal printable ASCII + common whitespace)
+          regex: (?ms)^(b|f|u|r|B|F|U|R)?[\'\"].*[^\x20-\x7E\t\r\n].*[\'\"]$
+          metavariable: $STR
+    message: String containing non-visible/control characters detected - potential obfuscated payload
+    languages:
+      - javascript
+      - typescript
+      - python
+      - java
+      - go
+      - ruby
+      - php
+      - c
+      - cpp
+      - csharp
+    severity: ERROR
+    metadata:
+      category: obfuscation
+      confidence: HIGH
+      impact: HIGH
+      cwe:
+        - "CWE-94: Code Injection"
+        - "CWE-506: Embedded Malicious Code"
+      references:
+        - "https://attack.mitre.org/techniques/T1027/"
+        - "https://attack.mitre.org/techniques/T1140/"
+      description: "Generic detection of strings containing non-visible control characters or Unicode sequences commonly used across multiple programming languages to hide obfuscated payloads, encoded executables, or bypass static analysis."
+      attack_vectors:
+        - "Cross-platform obfuscation"
+        - "Control character obfuscation" 
+        - "Binary payload embedding"
+        - "Anti-analysis evasion"
+
+  - id: generic-long-string-with-non-printable
+    options:
+      symbolic_propagation: true
+    patterns:
+      - pattern-either:
+          - pattern: $VAR = $STR
+          - pattern: $FUNC(..., $STR, ...)
+          - pattern: |
+              {..., $KEY: $STR, ...}
+      - metavariable-regex:
+          # Matches strings >300 chars with significant non-printable content (higher threshold for generic)
+          regex: (?ms)^(b|f|u|r|B|F|U|R)?[\'\"].{300,}[\'\"]$
+          metavariable: $STR
+      - metavariable-regex:
+          # Additional check for multiple non-printable characters (higher confidence)
+          regex: (?ms).*[^\x20-\x7E\t\r\n].*[^\x20-\x7E\t\r\n].*
+          metavariable: $STR
+    message: Long string with multiple non-printable characters detected - likely malicious payload
+    languages:
+      - javascript
+      - typescript
+      - python
+      - java
+      - go
+      - ruby
+      - php
+      - c
+      - cpp
+      - csharp
+    severity: ERROR
+    metadata:
+      category: malware_pattern
+      confidence: HIGH
+      impact: HIGH
+      cwe:
+        - "CWE-94: Code Injection"
+        - "CWE-506: Embedded Malicious Code"
+      references:
+        - "https://attack.mitre.org/techniques/T1027/"
+        - "https://attack.mitre.org/techniques/T1140/"
+      description: "Generic detection of long strings (>300 chars) containing multiple non-printable characters across multiple programming languages, indicating highly obfuscated malicious payloads."
+      malware_techniques:
+        - "Cross-platform payload obfuscation"
+        - "Encrypted command hiding"
+        - "Anti-sandbox evasion"
+
+  - id: generic-unicode-tag-characters
+    options:
+      symbolic_propagation: true
+    patterns:
+      - pattern-either:
+          - pattern: $VAR = $STR
+          - pattern: $FUNC($STR)
+      - metavariable-regex:
+          # Detects extremely long strings (>500 chars) suggesting encoded obfuscation (conservative for generic)
+          regex: (?ms)^(b|f|u|r|B|F|U|R)?[\'\"].{500,}[\'\"]$
+          metavariable: $STR
+    message: Suspicious extremely long string detected - likely Unicode tag character obfuscation
+    languages:
+      - javascript
+      - typescript
+      - python
+      - java
+      - go
+      - ruby
+      - php
+      - c
+      - cpp
+      - csharp
+    severity: WARNING
+    metadata:
+      category: obfuscation
+      confidence: MEDIUM
+      impact: HIGH
+      cwe:
+        - "CWE-94: Code Injection"
+        - "CWE-506: Embedded Malicious Code"
+      references:
+        - "https://attack.mitre.org/techniques/T1027/"
+        - "https://attack.mitre.org/techniques/T1140/"
+      description: "Generic detection of extremely long strings across multiple programming languages that may contain Unicode tag characters or other advanced obfuscation techniques."
+      attack_vectors:
+        - "Cross-platform Unicode obfuscation"
+        - "Invisible character steganography"
+        - "Advanced payload hiding"
+
+  - id: generic-high-non-ascii-density
+    options:
+      symbolic_propagation: true
+    patterns:
+      - pattern-either:
+          - pattern: $VAR = $STR
+          - pattern: $FUNC($STR)
+      - metavariable-regex:
+          # Detects strings with high density of non-printable characters (likely encoded obfuscation)
+          regex: (?ms)^(b|f|u|r|B|F|U|R)?[\'\"].*([^\x20-\x7E\t\r\n].*){8,}[\'\"]$
+          metavariable: $STR
+    message: High non-ASCII character density detected - potential encoded obfuscated payload
+    languages:
+      - javascript
+      - typescript
+      - python
+      - java
+      - go
+      - ruby
+      - php
+      - c
+      - cpp
+      - csharp
+    severity: WARNING
+    metadata:
+      category: obfuscation
+      confidence: MEDIUM
+      impact: MEDIUM
+      description: "Generic detection of strings with unusually high density of non-printable characters across multiple programming languages, which may indicate Unicode-encoded obfuscated payloads or binary data disguised as text."

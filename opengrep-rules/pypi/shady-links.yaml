@@ -1,0 +1,46 @@
+rules:
+- id: shady-links
+  languages:
+  - javascript
+  - json
+  - python
+  - typescript
+  - go
+  message: This package contains an URL to a domain with a suspicious extension
+  metadata:
+    confidence: LOW
+    description: Identify when a package contains an URL to a domain with a suspicious
+      extension
+    endor-category: malware-detection
+    endor-tags:
+    - SEMGREP_IGNORE
+    endor-targets:
+    - ENDOR_TARGET_PACKAGE
+    version: latest
+  paths:
+    exclude:
+    - '*/test/*'
+    - '*/tests/*'
+    - '*/test_*'
+  patterns:
+  - pattern-not-regex: ^\s*\# .*
+  - pattern-not-regex: ^\s*\/\*(.|\n)*?\*\/\s*$
+  - pattern-not-regex: ^\s*\/\/.*$
+  - pattern-not-regex: ^\s*"""(.|\n)*?"""\s*$
+  - pattern-not-regex: ((?:https?:\/\/)?[^\n\[\/\?#"']*?(?:192\.168|10\.\d{1,3}|172\.(?:1[6-9]|2\d|3[0-1])|127\.\d{1,3})\.\d{1,3}\.\d{1,3}|0\.0\.0\.0|localhost)
+  - pattern-not-regex: ((?:https?:\/\/)?[^\n\[\/\?#"']*?(?:1\.1\.1\.1|8\.8\.8\.8))
+  - pattern-not-regex: ((?:https?:\/\/)?[^\n\[\/\?#"']*?(?:169\.254\.\d{1,3}\.\d{1,3}|\[fd00:ec2::254\]))
+  - pattern-not-regex: (?:https?:\/\/)?discord.com\/(invite|oauth2\/authorize)
+  - patterns:
+    - pattern: ("...")
+    - pattern-either:
+      - pattern-regex: ((?:https?:\/\/)?[^\n\[\/\?#"']*?(bit\.ly)\b)
+      - pattern-regex: ((?:https?:\/\/)?[^\n\[\/\?#"']*?(workers\.dev|appdomain\.cloud|ngrok\.io|termbin\.com|localhost\.run|webhook\.(site|cool)|oastify\.com|burpcollaborator\.(me|net)|trycloudflare\.com)\b)
+      - pattern-regex: ((?:https?:\/\/)?[^\n\[\/\?#"']*?(oast\.(pro|live|site|online|fun|me)|ply\.gg|pipedream\.net|dnslog\.cn|webhook-test\.com|typedwebhook\.tools|beeceptor\.com|ngrok-free\.(app|dev))\b)
+      - pattern-regex: ((?:https?:\/\/)?[^\n\[\/\?#"']*?(discord\.com|transfer\.sh|filetransfer\.io|sendspace\.com|backblazeb2\.com|paste\.ee|pastebin\.com|hastebin\.com|ghostbin.site|api\.telegram\.org|rentry\.co)\b)
+      - pattern-regex: ((?:https?:\/\/)?[^\n\[\/\?#"']*?(ipinfo\.io|checkip\.dyndns\.org|\bip\.me|jsonip\.com|ipify\.org|ifconfig\.me)\b)
+      - pattern-regex: ((?:https?:\/\/)?[^\n\[\/\?#"']*?(files\.catbox\.moe)\b)
+      - pattern-regex: (https?:\/\/[^\n\[\/\?#"']*?\.(link|xyz|tk|ml|ga|cf|gq|pw|top|club|mw|bd|ke|am|sbs|date|quest|cd|bid|cd|ws|icu|cam|uno|email|stream|zip)\/)
+      - pattern-regex: (https?:\/\/[^\n\[\/\?#"']*?(?:\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}))
+      - pattern-regex: (https?:\/\/[^\n\[\/\?#"']*?(?:\[(([A-Fa-f0-9]{1,4}:){0,7}|:):?[A-Fa-f0-9]{1,4}(:[A-Fa-f0-9]{1,4}){0,7})\])
+  severity: INFO

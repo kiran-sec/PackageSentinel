@@ -1,0 +1,84 @@
+rules:
+  - id: js-supply-chain-indicators
+    patterns:
+      - pattern-either:
+        # Package.json manipulation
+        - pattern: |
+            require('fs').writeFileSync('package.json', $MALICIOUS_JSON)
+        - pattern: |
+            JSON.stringify({..., scripts: {..., $HOOK: $MALICIOUS_SCRIPT}, ...})
+        # Dependency confusion
+        - pattern: |
+            require($INTERNAL_PACKAGE)
+        - pattern: |
+            import $VAR from $INTERNAL_PACKAGE
+        # Typosquatting detection patterns
+        - pattern: |
+            require($TYPO_PACKAGE)
+        - pattern: |
+            npm.load($CONFIG, function() { npm.commands.install([$TYPO_PACKAGE], ...) })
+        # Install script abuse
+        - pattern: |
+            if (process.argv[2] === 'install') {
+                $MALICIOUS_CODE
+            }
+        - pattern: |
+            process.on('exit', function() {
+                $MALICIOUS_CODE
+            })
+        # Registry manipulation
+        - pattern: |
+            npm.config.set('registry', $MALICIOUS_REGISTRY)
+        - pattern: |
+            process.env.NPM_CONFIG_REGISTRY = $MALICIOUS_REGISTRY
+        # Package verification bypass
+        - pattern: |
+            npm.config.set('ignore-scripts', false)
+        - pattern: |
+            process.env.NPM_CONFIG_IGNORE_SCRIPTS = 'false'
+        # Suspicious package operations
+        - pattern: |
+            require('child_process').exec('npm publish ...')
+        - pattern: |
+            require('child_process').exec('npm unpublish ...')
+        # Lock file manipulation
+        - pattern: |
+            require('fs').writeFileSync('package-lock.json', $MALICIOUS_LOCK)
+        - pattern: |
+            require('fs').writeFileSync('yarn.lock', $MALICIOUS_LOCK)
+        # Maintainer account manipulation
+        - pattern: |
+            require('child_process').exec('npm owner add $MALICIOUS_USER $PACKAGE')
+        # Version manipulation
+        - pattern: |
+            require('child_process').exec('npm version $VERSION')
+        # Publishing with malicious payload
+        - pattern: |
+            require('child_process').exec('npm publish --force')
+      - metavariable-regex:
+          regex: (?i).*(@[a-z0-9-]+/[a-z0-9-]+|[a-z0-9-]+).*
+          metavariable: $INTERNAL_PACKAGE
+      - metavariable-regex:
+          regex: (?i).*(lodahs|reqeusts|expres|react-domm|axios-|request-|moment-js|bootstrap-|jquery-|angular-js|vue-js).*
+          metavariable: $TYPO_PACKAGE
+      - metavariable-regex:
+          regex: (?i).*(evil|malicious|bad|hack|attacker|steal|phish|scam).*
+          metavariable: $MALICIOUS_USER
+      - metavariable-regex:
+          regex: (?i).*(?!registry\.npmjs\.org|registry\.yarnpkg\.com).*
+          metavariable: $MALICIOUS_REGISTRY
+    message: Supply chain attack indicators detected - potential package compromise or dependency confusion
+    languages:
+      - javascript
+      - typescript
+    severity: CRITICAL
+    metadata:
+      version: latest
+      endor-category: malware-detection
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      confidence: MEDIUM
+      malware-type: supply-chain
+      attack-vector: dependency-confusion
+      references:
+        - "https://attack.mitre.org/techniques/T1195/"
+        - "https://medium.com/@alex.birsan/dependency-confusion-4a5d60fec610"

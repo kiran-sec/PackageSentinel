@@ -1,0 +1,84 @@
+rules:
+  - id: py-file-operations-suspicious
+    patterns:
+      - pattern-either:
+        # File operations on sensitive paths
+        - pattern: |
+            open($PATH, ...)
+        - pattern: |
+            with open($PATH, ...) as $F: ...
+        - pattern: |
+            pathlib.Path($PATH).read_text(...)
+        - pattern: |
+            pathlib.Path($PATH).read_bytes(...)
+        - pattern: |
+            pathlib.Path($PATH).write_text(...)
+        - pattern: |
+            pathlib.Path($PATH).write_bytes(...)
+        - pattern: |
+            shutil.copy($SRC, $PATH)
+        - pattern: |
+            shutil.copy2($SRC, $PATH)
+        - pattern: |
+            shutil.copyfile($SRC, $PATH)
+        - pattern: |
+            shutil.move($SRC, $PATH)
+        # Process execution
+        - pattern: |
+            subprocess.call($CMD, ...)
+        - pattern: |
+            subprocess.run($CMD, ...)
+        - pattern: |
+            subprocess.Popen($CMD, ...)
+        - pattern: |
+            os.system($CMD)
+        - pattern: |
+            os.popen($CMD)
+        - pattern: |
+            os.execv($CMD, ...)
+        - pattern: |
+            os.execvp($CMD, ...)
+        # Environment variable access
+        - pattern: |
+            os.environ[$ENVVAR]
+        - pattern: |
+            os.getenv($ENVVAR)
+        # Home directory access
+        - pattern: |
+            os.path.expanduser("~")
+        - pattern: |
+            pathlib.Path.home()
+        - pattern: |
+            os.path.join(os.path.expanduser("~"), ...)
+      - metavariable-regex:
+          # Sensitive file paths
+          regex: (?i).*(etc/passwd|etc/shadow|\.ssh|\.aws|\.config|\.bashrc|\.zshrc|\.profile|windows/system32|program files|appdata|documents and settings|/proc/|/sys/).*
+          metavariable: $PATH
+      - metavariable-regex:
+          # Sensitive source paths
+          regex: (?i).*(etc/passwd|etc/shadow|\.ssh|\.aws|\.config|\.bashrc|\.zshrc|\.profile|windows/system32|program files|appdata|documents and settings|/proc/|/sys/).*
+          metavariable: $SRC
+      - metavariable-regex:
+          # Dangerous commands
+          regex: (?i).*(rm\s+-rf|del\s+/s|format|fdisk|chmod\s+777|sudo|su\s+root|useradd|userdel|passwd|crontab|systemctl|service).*
+          metavariable: $CMD
+      - metavariable-regex:
+          # Sensitive environment variables
+          regex: (?i).*(password|token|secret|key|api_key|private_key|aws_access|github_token|ssh_key|home|path).*
+          metavariable: $ENVVAR
+    message: Suspicious file system operation detected - accessing sensitive paths or executing dangerous commands
+    languages:
+      - python
+    severity: ERROR
+    metadata:
+      version: latest
+      endor-category: malware-detection
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      confidence: HIGH
+      malware-type: file-operations
+      attack-vector: system-access
+      cwe: "CWE-78: OS Command Injection"
+      references:
+        - "https://attack.mitre.org/techniques/T1005/"
+        - "https://attack.mitre.org/techniques/T1083/"
+        - "https://bandit.readthedocs.io/en/latest/plugins/b102_exec_used.html"

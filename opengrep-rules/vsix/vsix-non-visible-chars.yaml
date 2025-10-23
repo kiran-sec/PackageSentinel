@@ -1,0 +1,151 @@
+rules:
+  - id: vsix-non-visible-chars-in-strings
+    options:
+      symbolic_propagation: true
+    patterns:
+      - pattern-either:
+          - pattern: $VAR = $STR
+          - pattern: $VAR = [..., $STR, ...]
+          - pattern: $FUNC(..., $STR, ...)
+          - pattern: $FUNC(..., [..., $STR, ...], ...)
+          - pattern: |
+              {..., $KEY: $STR, ...}
+      - metavariable-regex:
+          # Matches strings with non-printable characters (excludes normal printable ASCII + common whitespace)
+          regex: (?ms)^(b|f|u|r|B|F|U|R)?[\'\"].*[^\x20-\x7E\t\r\n].*[\'\"]$
+          metavariable: $STR
+    message: String containing non-visible/control characters detected - potential obfuscated payload
+    languages:
+      - javascript
+      - typescript
+    severity: ERROR
+    paths:
+      exclude:
+        - "**/package.json"
+        - "**/package-lock.json"
+        - "**/node_modules/**"
+    metadata:
+      category: obfuscation
+      confidence: HIGH
+      impact: HIGH
+      cwe:
+        - "CWE-94: Code Injection"
+        - "CWE-506: Embedded Malicious Code"
+      references:
+        - "https://attack.mitre.org/techniques/T1027/"
+        - "https://attack.mitre.org/techniques/T1140/"
+      description: "Detects strings in VS Code extensions containing non-visible control characters or Unicode sequences commonly used in malware to hide obfuscated payloads or bypass static analysis."
+      attack_vectors:
+        - "VS Code API abuse through obfuscation"
+        - "Control character obfuscation" 
+        - "Binary payload embedding"
+        - "Anti-analysis evasion"
+
+  - id: vsix-long-string-with-non-printable
+    options:
+      symbolic_propagation: true
+    patterns:
+      - pattern-either:
+          - pattern: $VAR = $STR
+          - pattern: $VAR = [..., $STR, ...]
+          - pattern: $FUNC(..., $STR, ...)
+          - pattern: $FUNC(..., [..., $STR, ...], ...)
+          - pattern: |
+              {..., $KEY: $STR, ...}
+      - metavariable-regex:
+          # Matches strings >200 chars with significant non-printable content
+          regex: (?ms)^(b|f|u|r|B|F|U|R)?[\'\"].{200,}[\'\"]$
+          metavariable: $STR
+      - metavariable-regex:
+          # Additional check for multiple non-printable characters (higher confidence)
+          regex: (?ms).*[^\x20-\x7E\t\r\n].*[^\x20-\x7E\t\r\n].*
+          metavariable: $STR
+    message: Long string with multiple non-printable characters detected - likely malicious payload
+    languages:
+      - javascript
+      - typescript
+    severity: ERROR
+    paths:
+      exclude:
+        - "**/package.json"
+        - "**/package-lock.json"
+        - "**/node_modules/**"
+    metadata:
+      category: malware_pattern
+      confidence: HIGH
+      impact: HIGH
+      cwe:
+        - "CWE-94: Code Injection"
+        - "CWE-506: Embedded Malicious Code"
+      references:
+        - "https://attack.mitre.org/techniques/T1027/"
+        - "https://attack.mitre.org/techniques/T1140/"
+      description: "Detects long strings (>200 chars) in VS Code extensions containing multiple non-printable characters, indicating highly obfuscated malicious payloads."
+      malware_techniques:
+        - "VS Code extension backdoor obfuscation"
+        - "Encrypted command hiding"
+        - "Anti-sandbox evasion"
+
+  - id: vsix-unicode-tag-characters
+    options:
+      symbolic_propagation: true
+    patterns:
+      - pattern-either:
+          - pattern: $VAR = $STR
+          - pattern: $FUNC($STR)
+          - pattern: atob($STR)
+          - pattern: Buffer.from($STR, ...)
+          - pattern: vscode.window.showInformationMessage($STR)
+      - metavariable-regex:
+          # Detects extremely long strings (>200 chars) suggesting encoded obfuscation
+          regex: (?ms)^(b|f|u|r|B|F|U|R)?[\'\"].{200,}[\'\"]$
+          metavariable: $STR
+    message: Suspicious long string detected - likely Unicode tag character obfuscation in VS Code extension
+    languages:
+      - javascript
+      - typescript
+    severity: ERROR
+    paths:
+      exclude:
+        - "**/package.json"
+        - "**/package-lock.json"
+        - "**/node_modules/**"
+    metadata:
+      category: obfuscation
+      confidence: HIGH
+      impact: HIGH
+      cwe:
+        - "CWE-94: Code Injection"
+        - "CWE-506: Embedded Malicious Code"
+      references:
+        - "https://attack.mitre.org/techniques/T1027/"
+        - "https://attack.mitre.org/techniques/T1140/"
+      description: "Detects extremely long strings in VS Code extensions that may contain Unicode tag characters or other advanced obfuscation techniques targeting the VS Code environment."
+      attack_vectors:
+        - "Unicode Tag Character obfuscation"
+        - "VS Code API manipulation"
+        - "Extension marketplace evasion"
+
+  - id: vsix-high-non-ascii-density
+    options:
+      symbolic_propagation: true
+    patterns:
+      - pattern-either:
+          - pattern: $VAR = $STR
+          - pattern: atob($STR)
+          - pattern: Buffer.from($STR, ...)
+          - pattern: eval($STR)
+      - metavariable-regex:
+          # Detects strings with high density of non-printable characters (likely encoded obfuscation)
+          regex: (?ms)^(b|f|u|r|B|F|U|R)?[\'\"].*([^\x20-\x7E\t\r\n].*){5,}[\'\"]$
+          metavariable: $STR
+    message: High non-ASCII character density detected - potential encoded obfuscated payload in VS Code extension
+    languages:
+      - javascript
+      - typescript
+    severity: WARNING
+    metadata:
+      category: obfuscation
+      confidence: MEDIUM
+      impact: MEDIUM
+      description: "Detects VS Code extension strings with unusually high density of non-printable characters, which may indicate Unicode-encoded obfuscated payloads targeting the VS Code environment."

@@ -1,0 +1,47 @@
+rules:
+  - id: js-npm-install-hook-with-sensitive-string
+    languages:
+    - json
+    message: package.json declares $Y script that contains sensitive string
+    patterns:
+      - pattern-inside: |
+          "scripts":
+            {
+              ...
+            }
+      - pattern: |
+          $Y: "$X"
+      - metavariable-regex:
+          metavariable: $Y
+          regex: (?i)^"(preinstall|install|postinstall)"$
+      # Created with: sensitive-strings-create-regex.py -i as-is b64
+      - metavariable-regex:
+          metavariable: $X
+          regex: .*(?i)(http://|aHR0cDov|https://|aHR0cHM6|start|c3Rh|cmd|Y21k|cmd\.exe|Y21kLmV4|net|bmV0|powershell|cG93ZXJzaGVs|IEX\(IWR|SUVYKElX|antonioCoco/ConPtyShell|YW50b25pb0NvY28vQ29uUHR5U2hl|awk|YXdr|ncat|bmNh|nc|nc -e|bmMg|-e /bin/|LWUgL2Jp|sh|sh -i|c2gg|/bin/sh|L2Jpbi9z|bash|YmFz|bash -l|YmFzaCAt|/bin/bash|L2Jpbi9iYXNo|base64|YmFzZTY0|/dev/tcp|L2Rldi90|/inet/tcp/|L2luZXQvdGNw|curl|Y3Vy|wget|d2dl|eval|ZXZh|npm install|bnBtIGluc3Rh|pip install|cGlwIGluc3Rh|pip3 install|cGlwMyBpbnN0YWxs).*
+      # Allow opencollection (includes 'nc')
+      - metavariable-regex:
+          metavariable: $X
+          regex: (?i)^(?!(opencollective)).*
+    paths:
+      include:
+        - "*/package.json"
+        - "**/package-lock.json"
+        - "*/npm-shrinkwrap.json"
+        - "*/js-npm-install-hook-with-sensitive-string.json"
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      references:
+      - https://snyk.io/blog/npm-security-malicious-code-in-oss-npm-packages/
+      - https://docs.npmjs.com/cli/v9/using-npm/scripts
+      - https://docs.npmjs.com/creating-a-package-json-file#creating-a-default-packagejson-file
+      endor-targets:
+      - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      endor-attack-examples:
+      - https://blog-phylum-io.cdn.ampproject.org/c/s/blog.phylum.io/phylum-identifies-98-malicious-npm-packages?hs_amp=true
+      - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/npm/deasyncp
+      - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/npm/maybemaliciouspackage
+      endor-tags:
+      - ANALYTICS_INFO
+    severity: WARNING

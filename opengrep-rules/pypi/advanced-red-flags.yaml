@@ -1,0 +1,300 @@
+rules:
+  - id: pypi-malicious-imports
+    patterns:
+      - pattern-either:
+          # System manipulation imports
+          - pattern: |
+              import winreg
+          - pattern: |
+              from winreg import $FUNCS
+          # Process injection imports
+          - pattern: |
+              import ctypes
+          - pattern: |
+              from ctypes import windll
+          - pattern: |
+              from ctypes.wintypes import $TYPES
+          # Anti-analysis imports
+          - pattern: |
+              import debugpy
+          - pattern: |
+              import pdb
+          - pattern: |
+              import gc
+          # Network backdoor imports
+          - pattern: |
+              import socket
+          - pattern: |
+              import socketserver
+          - pattern: |
+              from socket import $FUNCS
+          # Steganography imports
+          - pattern: |
+              from PIL import Image
+          - pattern: |
+              import steganography
+      - patterns:
+          - pattern-either:
+              - pattern: |
+                  socket.socket($FAMILY, socket.SOCK_STREAM)
+              - pattern: |
+                  ctypes.windll.$LIB
+              - pattern: |
+                  winreg.OpenKey(...)
+          - pattern: |
+              ...
+    message: Malicious import patterns detected - potential system compromise
+    languages: [python]
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: HIGH
+      description: "Detects imports of modules commonly used in malicious Python packages including system manipulation (winreg), process injection (ctypes), anti-analysis (debugger), network backdoors (socket), and steganography libraries. These imports when combined with suspicious behavior patterns often indicate malware attempting system compromise, data theft, or establishing persistent access. This rule specifically targets Python environments and PyPI packages."
+      attack_vectors:
+        - "Windows registry manipulation"
+        - "Process injection attacks"
+        - "Network backdoor establishment"
+        - "Anti-debugging techniques"
+      references:
+        - "https://attack.mitre.org/techniques/T1112/"
+        - "https://attack.mitre.org/techniques/T1055/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Windows registry manipulation"
+        - "Process injection attacks"
+
+  - id: pypi-steganography-techniques
+    patterns:
+      - pattern-either:
+          # Image-based steganography
+          - pattern: |
+              img = Image.open($FILE)
+              pixels = img.load()
+          - pattern: |
+              img.putpixel(($X, $Y), ($R, $G, $B))
+          # Audio steganography
+          - pattern: |
+              import wave
+          - pattern: |
+              import audioop
+          # File metadata manipulation
+          - pattern: |
+              import exifread  
+          - pattern: |
+              from PIL.ExifTags import TAGS
+          # LSB (Least Significant Bit) manipulation
+          - patterns:
+              - pattern: |
+                  $DATA & 0x01
+              - pattern: |
+                  $DATA | 0x01
+              - pattern: |
+                  $DATA ^ 0x01
+    message: Steganography techniques detected - potential data hiding
+    languages: [python]
+    severity: WARNING
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      description: "Detects steganography techniques used to hide malicious data within images, audio files, or other media. These techniques allow malware to conceal command and control instructions, configuration data, or additional payloads within seemingly innocent files, making detection more difficult. This rule specifically targets Python environments and PyPI packages."
+      attack_vectors:
+        - "Image-based data hiding"
+        - "Audio steganography"
+        - "Metadata manipulation"
+        - "LSB bit manipulation"
+      references:
+        - "https://attack.mitre.org/techniques/T1027/"
+        - "https://attack.mitre.org/techniques/T1140/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Image-based data hiding"
+        - "Audio steganography"
+
+  - id: pypi-system-backdoor
+    patterns:
+      - pattern-either:
+          # Reverse shell patterns
+          - pattern: |
+              s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+              s.connect(($HOST, $PORT))
+          - pattern: |
+              subprocess.Popen(["/bin/sh"], stdin=s.fileno(), stdout=s.fileno(), stderr=s.fileno())
+          # Command execution backdoor
+          - pattern: |
+              while True:
+                  command = s.recv($SIZE).decode()
+                  output = subprocess.check_output(command, shell=True)
+          # Persistence mechanisms
+          - pattern: |
+              with open(os.path.expanduser("~/.bashrc"), "a") as f:
+                  f.write($PAYLOAD)
+          - pattern: |
+              shutil.copy(__file__, "/etc/init.d/$SERVICE")
+          # Service installation
+          - pattern: |
+              os.system("systemctl enable $SERVICE")
+          - pattern: |
+              os.system("service $SERVICE start")
+    message: System backdoor detected - persistent malware access
+    languages: [python]
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: HIGH
+      description: "Detects system backdoor implementations including reverse shells, command execution backdoors, persistence mechanisms, and service installation patterns. These techniques provide attackers with persistent remote access to compromised systems, allowing for data theft, lateral movement, and long-term system control. This rule specifically targets Python environments and PyPI packages."
+      attack_vectors:
+        - "Reverse shell establishment"
+        - "Command execution backdoors"
+        - "Boot persistence mechanisms"
+        - "Service-based persistence"
+      references:
+        - "https://attack.mitre.org/techniques/T1059/"
+        - "https://attack.mitre.org/techniques/T1543/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Reverse shell establishment"
+        - "Command execution backdoors"
+
+  - id: pypi-browser-credential-theft
+    patterns:
+      - pattern-either:
+          # Chrome credential access
+          - pattern: |
+              sqlite3.connect($PATH + "Login Data")
+          - pattern: |
+              sqlite3.connect($PATH + "Cookies")
+          # Firefox credential access  
+          - pattern: |
+              sqlite3.connect($PATH + "cookies.sqlite")
+          - pattern: |
+              sqlite3.connect($PATH + "places.sqlite")
+          # Browser profile enumeration
+          - patterns:
+              - pattern: |
+                  os.listdir($PROFILE_PATH)
+              - metavariable-regex:
+                  metavariable: $PROFILE_PATH
+                  regex: (?i).*(chrome|firefox|safari|edge|opera).*profile
+          # Credential decryption
+          - pattern: |
+              import win32crypt
+          - pattern: |
+              win32crypt.CryptUnprotectData($DATA)
+          # Password extraction
+          - pattern: |
+              cursor.execute("SELECT $COLS FROM logins")
+    message: Browser credential theft detected - sensitive data access
+    languages: [python]
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: HIGH
+      description: "Detects browser credential theft patterns including SQLite database access for stored passwords and cookies, browser profile enumeration, and Windows credential decryption. This behavior is commonly used by information stealers to harvest saved login credentials, session cookies, and browsing data from popular web browsers. This rule specifically targets Python environments and PyPI packages."
+      attack_vectors:
+        - "Saved password extraction"
+        - "Session cookie theft"
+        - "Browser profile enumeration"
+        - "Credential decryption"
+      references:
+        - "https://attack.mitre.org/techniques/T1555/"
+        - "https://attack.mitre.org/techniques/T1539/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Saved password extraction"
+        - "Session cookie theft"
+
+  - id: pypi-memory-injection
+    patterns:
+      - pattern-either:
+          # Process hollowing
+          - pattern: |
+              ctypes.windll.kernel32.CreateProcessW($PATH, $CMDLINE, $SEC1, $SEC2, $INHERIT, $FLAGS, $ENV, $CWD, $STARTUP, $PROCESS)
+          - pattern: |
+              ctypes.windll.ntdll.ZwUnmapViewOfSection($HANDLE, $BASE)
+          # DLL injection
+          - pattern: |
+              ctypes.windll.kernel32.VirtualAllocEx($HANDLE, $ADDR, $SIZE, $TYPE, $PROTECT)
+          - pattern: |
+              ctypes.windll.kernel32.WriteProcessMemory($HANDLE, $ADDR, $DATA, $SIZE, $WRITTEN)
+          # Thread injection
+          - pattern: |
+              ctypes.windll.kernel32.CreateRemoteThread($HANDLE, $SEC, $STACK, $START, $PARAM, $FLAGS, $THREAD)
+          # Process enumeration for injection
+          - pattern: |
+              for proc in psutil.process_iter():
+                  if proc.name() == $TARGET:
+                      $HANDLE = proc.pid
+    message: Memory injection techniques detected - advanced malware behavior
+    languages: [python]
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: HIGH
+      description: "Detects advanced memory injection techniques including process hollowing, DLL injection, and thread injection using Windows API calls through ctypes. These techniques allow malware to execute code within legitimate processes, evade detection, and maintain persistence while appearing as trusted applications. This rule specifically targets Python environments and PyPI packages."
+      attack_vectors:
+        - "Process hollowing"
+        - "DLL injection"
+        - "Thread injection"
+        - "Process manipulation"
+      references:
+        - "https://attack.mitre.org/techniques/T1055/"
+        - "https://attack.mitre.org/techniques/T1620/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Process hollowing"
+        - "DLL injection"
+
+  - id: pypi-keylogger-behavior
+    patterns:
+      - pattern-either:
+          # Keyboard hook installation
+          - pattern: |
+              import pynput
+          - pattern: |
+              from pynput import keyboard
+          - pattern: |
+              keyboard.Listener(on_press=$HANDLER)
+          # Low-level keyboard monitoring
+          - pattern: |
+              import win32api
+          - pattern: |
+              win32api.SetWindowsHookEx($HOOKTYPE, $PROC, $HMOD, $THREADID)
+          # Keylogger data collection
+          - patterns:
+              - pattern: |
+                  def $HANDLER(key):
+                      ...
+                      $LOG.append(str(key))
+              - pattern: |
+                  with open($LOGFILE, "a") as f:
+                      f.write($KEYDATA)
+          # Screen capture for credentials
+          - pattern: |
+              import PIL.ImageGrab
+          - pattern: |
+              PIL.ImageGrab.grab()
+    message: Keylogger behavior detected - credential harvesting malware
+    languages: [python]
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: HIGH
+      description: "Detects keylogger behavior including keyboard hook installation, low-level keyboard monitoring, keystroke data collection, and screen capture functionality. Keyloggers are commonly used by malware to steal passwords, credit card numbers, and other sensitive information by recording user input. This rule specifically targets Python environments and PyPI packages."
+      attack_vectors:
+        - "Keystroke logging"
+        - "Keyboard hook installation"
+        - "Screen capture"
+        - "Credential harvesting"
+      references:
+        - "https://attack.mitre.org/techniques/T1056/"
+        - "https://attack.mitre.org/techniques/T1113/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Keystroke logging"
+        - "Keyboard hook installation"

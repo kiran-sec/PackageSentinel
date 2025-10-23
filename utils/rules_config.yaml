@@ -1,0 +1,195 @@
+# OpenGrep Rules Configuration
+# This file allows easy customization of detection rules for both npm and PyPI ecosystems
+
+rule_configuration:
+  # Global settings
+  global:
+    confidence_threshold: 0.6  # Minimum confidence for rule matching
+    enable_experimental_rules: false
+    max_file_size_mb: 10  # Skip files larger than this
+    timeout_seconds: 30   # Per-rule timeout
+    
+  # Ecosystem-specific settings
+  ecosystems:
+    npm:
+      enabled: true
+      file_extensions: ['.js', '.jsx', '.ts', '.tsx', '.json']
+      exclude_paths: 
+        - '**/node_modules/**'
+        - '**/package-lock.json'
+        - '**/*.min.js'
+      rules:
+        obfuscation:
+          enabled: true
+          entropy_threshold: 4.5
+          string_length_threshold: 80
+          severity: WARNING
+        
+        dynamic_execution:
+          enabled: true
+          detect_eval: true
+          detect_function_constructor: true
+          detect_dynamic_require: true
+          severity: ERROR
+        
+        network_activity:
+          enabled: true
+          suspicious_domains:
+            - '*.tk'
+            - '*.ml' 
+            - '*.cf'
+            - '*.ga'
+            - 'pastebin.com'
+            - 'bit.ly'
+            - 'tinyurl.com'
+            - 'ngrok.io'
+            - 'discord.gg'
+          severity: ERROR
+        
+        cryptojacking:
+          enabled: true
+          detect_mining_libraries: true
+          detect_webassembly: true
+          detect_worker_threads: true
+          mining_keywords:
+            - 'coinhive'
+            - 'crypto-night'
+            - 'xmrig'
+            - 'minergate'
+            - 'webminerpool'
+          severity: ERROR
+        
+        file_operations:
+          enabled: true
+          sensitive_paths:
+            - '/etc/passwd'
+            - '/etc/shadow'
+            - '~/.ssh/*'
+            - '~/.aws/*'
+            - 'C:\\Windows\\System32\\*'
+          dangerous_commands:
+            - 'rm -rf'
+            - 'chmod 777'
+            - 'sudo'
+          severity: ERROR
+    
+    pypi:
+      enabled: true
+      file_extensions: ['.py', '.pyx', '.pyw']
+      exclude_paths:
+        - '**/site-packages/**'
+        - '**/dist-packages/**'
+        - '**/__pycache__/**'
+        - '**/*.pyc'
+      rules:
+        obfuscation:
+          enabled: true
+          entropy_threshold: 5.0
+          string_length_threshold: 100
+          detect_base64: true
+          detect_hex_encoding: true
+          severity: WARNING
+        
+        dynamic_execution:
+          enabled: true
+          detect_eval: true
+          detect_exec: true
+          detect_compile: true
+          detect_dynamic_import: true
+          severity: ERROR
+        
+        network_activity:
+          enabled: true
+          suspicious_domains:
+            - '*.tk'
+            - '*.ml'
+            - '*.cf' 
+            - '*.ga'
+            - 'pastebin.com'
+            - 'bit.ly'
+            - 'ngrok.io'
+            - 'duckdns.org'
+          detect_requests: true
+          detect_urllib: true
+          detect_socket: true
+          severity: ERROR
+        
+        cryptojacking:
+          enabled: true
+          detect_hashlib_intensive: true
+          detect_multiprocessing: true
+          detect_threading_intensive: true
+          mining_libraries:
+            - 'pycuda'
+            - 'pyopencl'
+            - 'cupy'
+          severity: ERROR
+        
+        file_operations:
+          enabled: true
+          sensitive_paths:
+            - '/etc/passwd'
+            - '/etc/shadow'
+            - '~/.ssh/*'
+            - '~/.aws/*'
+            - '/proc/*'
+            - '/sys/*'
+          dangerous_operations:
+            - 'subprocess.call'
+            - 'os.system'
+            - 'os.popen'
+          severity: ERROR
+
+# Custom rule templates
+rule_templates:
+  basic_pattern:
+    pattern: '$FUNCTION(..., $SUSPICIOUS_ARG, ...)'
+    message: 'Suspicious pattern detected'
+    severity: 'INFO'
+    metadata:
+      confidence: 'LOW'
+      
+  string_analysis:
+    patterns:
+      - pattern: 'var $VAR = $STR'
+      - pattern: '$VAR = $STR'
+    metavariable-analysis:
+      analyzer: 'entropy'
+      metavariable: '$STR'
+    message: 'High-entropy string detected'
+    
+  api_sequence:
+    pattern-either:
+      - pattern: '$API1(...); ...; $API2(...)'
+      - pattern: '$API1(...)\n$API2(...)'
+    message: 'Suspicious API call sequence'
+
+# Rule customization guidelines
+customization_guide:
+  adding_new_rules:
+    - "Create YAML files in opengrep-rules/npm/ or opengrep-rules/pypi/"
+    - "Follow the semgrep rule format"
+    - "Test rules with semgrep --config <rule-file> <test-directory>"
+    - "Update this config file to enable/disable rules"
+  
+  modifying_existing_rules:
+    - "Edit YAML files directly in opengrep-rules/ directories"
+    - "Adjust pattern matching, severity, and metadata"
+    - "Update thresholds in this config file"
+  
+  rule_testing:
+    - "Use: semgrep --config opengrep-rules/npm/ test-package/"
+    - "Create test cases in malware_samples/ directories"
+    - "Verify both positive and negative test cases"
+  
+  performance_tuning:
+    - "Adjust timeout_seconds for slow rules"
+    - "Set appropriate file size limits"
+    - "Use exclude_paths to skip irrelevant files"
+
+# Integration settings
+integration:
+  update_rules_from_upstream: false  # Auto-update from semgrep registry
+  enable_rule_metrics: true          # Collect rule performance metrics
+  cache_results: true                # Cache analysis results
+  parallel_execution: true           # Run rules in parallel

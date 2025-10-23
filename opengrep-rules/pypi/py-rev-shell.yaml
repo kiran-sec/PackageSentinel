@@ -1,0 +1,37 @@
+rules:
+  - id: py-rev-shell
+    languages:
+      - python
+    pattern-either:
+      - pattern: |
+          $SOCK = socket.socket(...)
+          ...
+          $SOCK.connect(...)
+          ...
+          os.$DUP(..., $SOCK.fileno(), ...)
+          ...
+          pty.spawn(...)
+      # The cheat sheet on highon.coffee completes the reverse shell with
+      # subprocess.call(["/bin/sh","-i"]). However, since there are x Python
+      # ways to create subprocesses and y shells, let's try a pattern without
+      # specifying that last bit at all. If it is creating too many FPs by itself,
+      # it can be combined with another API or malware rule.
+      - pattern: |
+          $SOCK = socket.socket(...)
+          ...
+          $SOCK.connect(...)
+          ...
+          os.$DUP(..., $SOCK.fileno(), ...)
+    message: This Python file opens a reverse shell.
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: HIGH
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      endor-tags:
+        - ANALYTICS_IMPACT
+      endor-attack-examples:
+        - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/pypi/10Cent10/999.0.4
+        - https://highon.coffee/blog/reverse-shell-cheat-sheet/

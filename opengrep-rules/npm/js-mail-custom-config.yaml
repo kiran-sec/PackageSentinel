@@ -1,0 +1,54 @@
+rules:
+- id: js-mail-custom-config
+  patterns:
+  - pattern-either:
+    - patterns:
+      - pattern-inside: |
+                            mailserver:
+                            {
+                              ...
+                            }
+      - pattern-either:
+          - pattern: host:...
+          - pattern: port:...
+          - pattern: secure:...
+          - pattern-inside: |
+                              auth:
+                                {
+                                ...
+                                }
+          - pattern-either:
+                - pattern: user:...
+                - pattern: pass:...
+    - patterns:
+      - pattern-inside: |
+                          mail:
+                              {
+                                ...
+                              }
+      - pattern-either:
+        - pattern: to:...
+        - pattern: subject:...
+        - pattern: |
+                    attachments:
+                    [{
+                      ...
+                    }]
+  message: |
+      Observed custom script that is used to setup mailserver or mail configuration
+  languages:
+    - js
+  metadata:
+      version: latest
+      confidence: MEDIUM
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-attack-examples:
+        - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/npm/bitcionjslib
+      references:
+        - https://github.com/advisories/GHSA-p4mf-4qvh-w8g5
+        - https://github.com/advisories/GHSA-629c-j867-3v45
+      endor-category: malware-detection
+      endor-tags:
+        - ANALYTICS_INFO
+  severity: WARNING

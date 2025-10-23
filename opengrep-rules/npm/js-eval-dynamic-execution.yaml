@@ -1,0 +1,41 @@
+rules:
+  - id: js-eval-dynamic-execution
+    patterns:
+      - pattern-either:
+        # Direct eval usage
+        - pattern: eval($CODE)
+        - pattern: window.eval($CODE)
+        - pattern: global.eval($CODE)
+        # Function constructor
+        - pattern: new Function($ARGS, $CODE)
+        - pattern: Function($ARGS, $CODE)
+        # setTimeout/setInterval with string code
+        - pattern: setTimeout($CODE, $TIME)
+        - pattern: setInterval($CODE, $TIME)
+        # Dynamic require
+        - pattern: require($DYNAMIC_PATH)
+        # Dynamic import
+        - pattern: import($DYNAMIC_PATH)
+      - metavariable-regex:
+          # Match variable/computed strings, not literals
+          regex: ^(?![\"\']).+$
+          metavariable: $CODE
+      - metavariable-regex:
+          # Match variable/computed paths, not static strings
+          regex: ^(?![\"\']).+$
+          metavariable: $DYNAMIC_PATH
+    message: Dynamic code execution detected - eval(), Function(), or dynamic require/import with variable input
+    languages:
+      - javascript
+      - typescript
+    severity: ERROR
+    metadata:
+      version: latest
+      endor-category: malware-detection
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      confidence: HIGH
+      malware-type: code-injection
+      cwe: "CWE-94: Improper Control of Generation of Code"
+      references:
+        - "https://owasp.org/www-community/attacks/Code_Injection"
+        - "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval#never_use_eval!"

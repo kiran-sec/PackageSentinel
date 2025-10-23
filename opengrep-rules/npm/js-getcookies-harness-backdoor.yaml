@@ -1,0 +1,36 @@
+rules:
+  - id: js-getcookies-harness-backdoor
+    options:
+      symbolic_propagation: true
+    patterns:
+      - pattern-either:
+        - patterns:
+          - pattern: Buffer.alloc(...)
+          - pattern-inside: module.exports.log =  ...
+          - pattern-inside: setTimeout(...)
+          - pattern-inside: JSON.stringify(req.headers).replace(/g([a-f0-9]{4})h((?:[a-f0-9]{2})+)i/gi, (o, p, v) => {...})
+        - patterns:
+          - pattern-either:
+            - pattern-regex: case .*(?i)(fffe|fffa).*
+            # 0xfffe—reset the code buffer
+            # 0xfffa—execute the code located in the buffer by calling vm.runInThisContext, providing module.exports, require, req, res, and next as arguments.
+            # default—load the remote code into memory for execution
+            - pattern-regex: ===.*(?i)('fffe'|'fffa'|'default').*
+          - pattern-either:
+            - pattern-inside: switch(...){}
+            - pattern-inside: if(...){...}
+          - pattern-inside: JSON.stringify(req.headers).replace(/g([a-f0-9]{4})h((?:[a-f0-9]{2})+)i/gi, (o, p, v) => {...})
+
+    message: This rule triggered the pattern that imports JSON.stringify and then uses the replace method to search for specific format of values in the headers and then check for the presence of the control flow codes of 0xfffe, 0xfffa and default.
+    metadata:
+      version: latest
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      endor-attack-examples:
+        - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/npm/getcookies
+      references:
+        - https://blog.npmjs.org/post/173526807575/reported-malicious-module-getcookies
+      endor-category: malware-detection
+      confidence: LOW
+    languages:
+      - js
+    severity: INFO

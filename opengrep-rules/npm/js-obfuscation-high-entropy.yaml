@@ -1,0 +1,42 @@
+rules:
+  - id: js-obfuscation-high-entropy
+    options:
+      symbolic_propagation: true
+    patterns:
+    - pattern-either:
+      # Match high-entropy strings assigned to variables or array elements
+      - pattern: var $VAR = $STR
+      - pattern: $VAR = [..., $STR, ...]
+      - pattern: const $VAR = $STR
+      - pattern: let $VAR = $STR
+      - pattern: |
+            $OBJ = {..., $KEY: $STR, ...}
+      - pattern: |
+            $OBJ = {..., $KEY: [..., $STR, ...], ...}
+      # Match high-entropy strings passed as arguments to functions
+      - pattern: $FUNC(..., $STR, ...)
+      - pattern: $FUNC(..., [..., $STR, ...], ...)
+    - metavariable-analysis:
+        analyzer: entropy
+        metavariable: $STR
+    - metavariable-regex:
+        regex: (?ms)^(b|f|u|r|B|F|U|R)?[\"\'].{80,}[\"\']$
+        metavariable: $STR
+    message: High-entropy string with more than 80 chars observed - possible obfuscated code or encoded payload
+    languages:
+      - javascript
+      - typescript
+    severity: WARNING
+    paths:
+      exclude:
+        - "**/package-lock.json"
+        - "**/node_modules/**"
+        - "**/*.min.js"
+    metadata:
+      version: latest
+      endor-category: malware-detection
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      confidence: MEDIUM
+      malware-type: obfuscation
+      references:
+        - "https://owasp.org/www-community/attacks/Code_Injection"

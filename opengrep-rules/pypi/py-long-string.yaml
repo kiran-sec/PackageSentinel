@@ -1,0 +1,38 @@
+rules:
+  - id: py-long-string
+    patterns:
+      - pattern-either:
+        - pattern: $VAR = $STR
+        - pattern: $VAR = [..., $STR, ...]
+        - pattern: $FUNC(..., $STR, ...)
+        - pattern: $FUNC(..., [..., $STR, ...], ...)
+        - pattern: |
+            {..., $KEY: $STR, ...}
+      - metavariable-regex:
+          # Covers string prefixes (if any), single and double quotes, single and multiline strings, slices
+          regex: (?ms)^(b|f|u|r|B|F|U|R)?['\"]{1,3}.{2000,}['\"]{1,3}(\[[\d\-:]+\])?$
+          metavariable: $STR
+    message: Long string with more than 2000 characters.
+    languages:
+      - python
+    severity: INFO
+    metadata:
+      version: latest
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      endor-tags:
+        - SEMGREP_IGNORE
+      confidence: LOW
+      description: "Detects extremely long strings (>2000 characters) that may contain obfuscated Python code, base64-encoded payloads, embedded executables, or large configuration data used to hide malicious functionality. Long strings are commonly used in Python malware to store encoded shellcode, serialized objects, or obfuscated commands that are decoded and executed at runtime. This rule specifically targets Python environments and PyPI packages."
+      attack_vectors:
+        - "Base64-encoded Python bytecode"
+        - "Serialized malicious objects"
+        - "Obfuscated command strings"
+        - "Embedded executable payloads"
+      references:
+        - "https://attack.mitre.org/techniques/T1027/"
+        - "https://attack.mitre.org/techniques/T1140/"
+      malware_techniques:
+        - "Base64-encoded Python bytecode"
+        - "Serialized malicious objects"

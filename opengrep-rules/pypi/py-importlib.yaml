@@ -1,0 +1,23 @@
+rules:
+  - id: py-importlib
+    pattern: |
+      $SPEC = importlib.util.spec_from_file_location(...)
+      ...
+      $MOD = importlib.util.module_from_spec(...)
+      ...
+      $SPEC.loader.exec_module($MOD)
+    message: Use of the importlib module to load and execute a compiled Python file (pyc).
+    languages:
+      - python
+    severity: INFO
+    metadata:
+      version: latest
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      confidence: LOW
+      references:
+      - https://docs.python.org/3/library/importlib.html#module-importlib
+      endor-attack-examples:
+      - https://www.reversinglabs.com/blog/when-python-bytecode-bites-back-who-checks-the-contents-of-compiled-python-files
+      - https://thehackernews.com/2023/06/malicious-pypi-packages-using-compiled.html

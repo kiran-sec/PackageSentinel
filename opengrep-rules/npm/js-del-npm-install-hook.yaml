@@ -1,0 +1,39 @@
+rules:
+  - id: js-del-npm-install-hook
+    options:
+      symbolic_propagation: true
+    patterns:
+      - pattern-either:
+        - patterns:
+          - pattern: delete JSON.parse(fs.readFileSync('package.json',...)).scripts.postinstall
+          - pattern: ...fs.unlinkSync(...)
+        - patterns:
+          - pattern: delete JSON.parse(fs.readFileSync('package.json',...)).scripts.preinstall
+          - pattern: ...fs.unlinkSync(...)
+        - patterns:
+          - pattern: delete JSON.parse(fs.readFileSync('package.json',...)).scripts.install
+          - pattern: ...fs.unlinkSync(...)
+        - patterns:
+          - pattern: delete JSON.parse(fs.readFileSync('package.json',...)).scripts.bin
+          - pattern: ...fs.unlinkSync(...)
+        - pattern-either:
+            - pattern: delete JSON.parse(fs.readFileSync('package.json',...)).scripts.postinstall
+            - pattern: delete JSON.parse(fs.readFileSync('package.json',...)).scripts.preinstall
+            - pattern: delete JSON.parse(fs.readFileSync('package.json',...)).scripts.install
+            - pattern: delete JSON.parse(fs.readFileSync('package.json',...)).scripts.bin
+    message: Delete pre/post/bin & install scripts in package.json and the log file of previous script executions
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      references:
+        - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/npm/shrugging-logging
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-attack-examples:
+        - https://github.com/advisories/GHSA-qv78-398w-cxp7
+      endor-category: malware-detection
+      endor-tags:
+        - ANALYTICS_INFO
+    languages:
+      - js
+    severity: WARNING

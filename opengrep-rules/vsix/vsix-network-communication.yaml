@@ -1,0 +1,70 @@
+rules:
+  - id: vsix-unauthorized-network-requests
+    message: Detected network requests in VS Code extension - potential data exfiltration
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    patterns:
+      - pattern-either:
+          - pattern: |
+              fetch($URL, ...)
+          - pattern: |
+              $HTTP.request($OPTS)
+          - pattern: |
+              $HTTP.get($URL, ...)
+          - pattern: |
+              $HTTP.post($URL, ...)
+          - pattern: |
+              axios.$METHOD($URL, ...)
+          - pattern: |
+              require('https').$METHOD(...)
+          - pattern: |
+              require('http').$METHOD(...)
+          - pattern: |
+              new XMLHttpRequest()
+    pattern-not:
+      - pattern: |
+          fetch("https://api.github.com/...", ...)
+      - pattern: |
+          fetch("https://marketplace.visualstudio.com/...", ...)
+    metadata:
+      category: network_activity
+      confidence: MEDIUM
+      impact: MEDIUM
+      references:
+        - "https://code.visualstudio.com/api/extension-capabilities/overview"
+      cwe:
+        - "CWE-200: Information Exposure"
+      technology:
+        - vscode
+        - extensions
+
+  - id: vsix-suspicious-domains
+    message: Detected connection to suspicious domain in VS Code extension
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    patterns:
+      - pattern-either:
+          - pattern: |
+              fetch("http://$DOMAIN/...", ...)
+          - pattern: |
+              fetch("https://$DOMAIN/...", ...)
+          - pattern: |
+              $HTTP.request({..., hostname: "$DOMAIN", ...})
+    pattern-where-python: |
+      suspicious_tlds = ['.tk', '.ml', '.ga', '.cf', '.gq', '.pw', '.cc', '.su', '.top']
+      any(tld in vars['$DOMAIN'] for tld in suspicious_tlds)
+    metadata:
+      category: malware_pattern
+      confidence: HIGH
+      impact: HIGH
+      references:
+        - "https://www.spamhaus.org/statistics/tlds/"
+      cwe:
+        - "CWE-200: Information Exposure"
+      technology:
+        - vscode
+        - extensions

@@ -1,0 +1,48 @@
+rules:
+  - id: java-dropper-download
+    languages:
+      - java
+    mode: taint
+    pattern-sources:
+      - pattern: new URL("...")
+    pattern-propagators:
+      - pattern: $X.read($Y)
+        from: $X
+        to: $Y
+    pattern-sinks:
+      - pattern: $OS.write(...)
+    message: Dropper - Response of HTTP to hard-coded URL is written to output stream [$OS]
+    severity: INFO
+    metadata:
+      version: latest
+      confidence: LOW
+      description: "Detects dropper behavior where HTTP response from hard-coded URL is written to file system, potentially dropping malicious payloads"
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      endor-attack-examples:
+        - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/mavencentral/com.github.codingandcoding:mail-watcher-plugin/1.16
+        
+  - id: java-dropper-script
+    languages:
+      - java
+    mode: taint
+    pattern-sources:
+      - pattern: new URL("...")
+    pattern-propagators:
+      - pattern: $X.read($Y)
+        from: $X
+        to: $Y
+    pattern-sinks:
+      - pattern: $SH.evaluate(...)
+    message: Dropper - Response of HTTP to hard-coded URL is executed by Java script shell [$SH]
+    severity: INFO
+    metadata:
+      version: latest
+      confidence: LOW
+      description: "Detects dropper behavior where HTTP response from hard-coded URL is executed by script shell, potentially running malicious code"
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      endor-attack-examples:
+        - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/mavencentral/com.github.codingandcoding:mail-watcher-plugin/1.16

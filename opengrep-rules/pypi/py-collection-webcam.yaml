@@ -1,0 +1,22 @@
+rules:
+  - id: py-collection-webcam
+    languages:
+      - python
+    options:
+      symbolic_propagation: true
+    pattern: |
+      $CAM = ctypes.windll.avicap32.capCreateCaptureWindowW(...)
+      ...
+      ctypes.windll.user32.SendMessageA(..., $CAM, ...)
+    message: The file connects to a local webcam.
+    severity: INFO
+    metadata:
+      version: latest
+      confidence: LOW
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      endor-tags:
+        - ANALYTICS_IGNORE
+      endor-attack-examples:
+        - https://socket.dev/blog/blank-grabber-python-package-steals-info-from-discord-and-telegram

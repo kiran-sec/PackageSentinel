@@ -1,0 +1,77 @@
+rules:
+  - id: js-social-engineering
+    patterns:
+      - pattern-either:
+        # Fake authentication prompts
+        - pattern: |
+            prompt($MESSAGE)
+        - pattern: |
+            confirm($MESSAGE)
+        - pattern: |
+            alert($MESSAGE)
+        # Credential harvesting forms
+        - pattern: |
+            document.createElement('input')
+        - pattern: |
+            $INPUT.type = 'password'
+        - pattern: |
+            $FORM.submit()
+        # Clipboard manipulation
+        - pattern: |
+            navigator.clipboard.writeText($DATA)
+        - pattern: |
+            navigator.clipboard.readText()
+        - pattern: |
+            document.execCommand('copy')
+        # Notification abuse
+        - pattern: |
+            new Notification($TITLE, $OPTIONS)
+        - pattern: |
+            Notification.requestPermission($CALLBACK)
+        # Fake download/update prompts
+        - pattern: |
+            location.href = $DOWNLOAD_URL
+        - pattern: |
+            window.open($MALICIOUS_URL, '_blank')
+        # Screen recording/capture
+        - pattern: |
+            navigator.mediaDevices.getDisplayMedia($CONSTRAINTS)
+        - pattern: |
+            navigator.getUserMedia($CONSTRAINTS, $SUCCESS, $ERROR)
+        # Geolocation harvesting
+        - pattern: |
+            navigator.geolocation.getCurrentPosition($SUCCESS, $ERROR)
+        # Battery status (fingerprinting)
+        - pattern: |
+            navigator.getBattery()
+        # Device information collection
+        - pattern: |
+            navigator.deviceMemory
+        - pattern: |
+            navigator.hardwareConcurrency
+        - pattern: |
+            screen.width + 'x' + screen.height
+      - metavariable-regex:
+          regex: (?i).*(password|login|signin|username|credential|auth|security|update|download|install|verify|confirm|urgent|expired|suspended|verify|click here|download now).*
+          metavariable: $MESSAGE
+      - metavariable-regex:
+          regex: (?i).*(malicious|phish|fake|scam|credential|harvest|steal).*
+          metavariable: $MALICIOUS_URL
+      - metavariable-regex:
+          regex: (?i).*(\.exe|\.zip|\.dmg|\.pkg|\.deb|\.msi|\.scr).*
+          metavariable: $DOWNLOAD_URL
+    message: Social engineering techniques detected - potential phishing or credential harvesting
+    languages:
+      - javascript
+      - typescript
+    severity: MEDIUM
+    metadata:
+      version: latest
+      endor-category: malware-detection
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      confidence: MEDIUM
+      malware-type: social-engineering
+      attack-vector: user-interaction
+      references:
+        - "https://attack.mitre.org/techniques/T1566/"
+        - "https://attack.mitre.org/techniques/T1204/"

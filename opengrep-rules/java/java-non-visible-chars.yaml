@@ -1,0 +1,141 @@
+rules:
+  - id: java-non-visible-chars-in-strings
+    options:
+      symbolic_propagation: true
+    patterns:
+      - pattern-either:
+          - pattern: $TYPE $VAR = $STR;
+          - pattern: String $VAR = $STR;
+          - pattern: $VAR = $STR
+          - pattern: $FUNC(..., $STR, ...)
+          - pattern: new String($STR)
+      - metavariable-regex:
+          # Matches strings with non-printable characters (excludes normal printable ASCII + common whitespace)
+          regex: (?ms)^[\"].*[^\x20-\x7E\t\r\n].*[\"]$
+          metavariable: $STR
+    message: String containing non-visible/control characters detected - potential obfuscated payload
+    languages:
+      - java
+    severity: ERROR
+    paths:
+      exclude:
+        - "**/pom.xml"
+        - "**/build.gradle"
+    metadata:
+      category: obfuscation
+      confidence: HIGH
+      impact: HIGH
+      cwe:
+        - "CWE-94: Code Injection"
+        - "CWE-506: Embedded Malicious Code"
+      references:
+        - "https://attack.mitre.org/techniques/T1027/"
+        - "https://attack.mitre.org/techniques/T1140/"
+      description: "Detects Java strings containing non-visible control characters or Unicode sequences commonly used in malware to hide obfuscated payloads, encoded executables, or bypass static analysis."
+      attack_vectors:
+        - "Null-byte injection attacks"
+        - "Control character obfuscation" 
+        - "Binary payload embedding"
+        - "Anti-analysis evasion"
+
+  - id: java-long-string-with-non-printable
+    options:
+      symbolic_propagation: true
+    patterns:
+      - pattern-either:
+          - pattern: $TYPE $VAR = $STR;
+          - pattern: String $VAR = $STR;
+          - pattern: $VAR = $STR
+          - pattern: $FUNC(..., $STR, ...)
+          - pattern: new String($STR)
+      - metavariable-regex:
+          # Matches strings >200 chars with significant non-printable content
+          regex: (?ms)^[\"].{200,}[\"]$
+          metavariable: $STR
+      - metavariable-regex:
+          # Additional check for multiple non-printable characters (higher confidence)
+          regex: (?ms).*[^\x20-\x7E\t\r\n].*[^\x20-\x7E\t\r\n].*
+          metavariable: $STR
+    message: Long string with multiple non-printable characters detected - likely malicious payload
+    languages:
+      - java
+    severity: ERROR
+    paths:
+      exclude:
+        - "**/pom.xml"
+        - "**/build.gradle"
+    metadata:
+      category: malware_pattern
+      confidence: HIGH
+      impact: HIGH
+      cwe:
+        - "CWE-94: Code Injection"
+        - "CWE-506: Embedded Malicious Code"
+      references:
+        - "https://attack.mitre.org/techniques/T1027/"
+        - "https://attack.mitre.org/techniques/T1140/"
+      description: "Detects long Java strings (>200 chars) containing multiple non-printable characters, indicating highly obfuscated malicious payloads."
+      malware_techniques:
+        - "Binary payload obfuscation"
+        - "Encrypted command hiding"
+        - "Anti-sandbox evasion"
+
+  - id: java-unicode-tag-characters
+    options:
+      symbolic_propagation: true
+    patterns:
+      - pattern-either:
+          - pattern: $VAR = $STR
+          - pattern: $FUNC($STR)
+          - pattern: Base64.getDecoder().decode($STR)
+          - pattern: new String($STR, ...)
+      - metavariable-regex:
+          # Detects extremely long strings (>200 chars) suggesting encoded obfuscation
+          regex: (?ms)^[\"].{200,}[\"]$
+          metavariable: $STR
+    message: Suspicious long string detected - likely Unicode tag character obfuscation
+    languages:
+      - java
+    severity: ERROR
+    paths:
+      exclude:
+        - "**/pom.xml"
+        - "**/build.gradle"
+    metadata:
+      category: obfuscation
+      confidence: HIGH
+      impact: HIGH
+      cwe:
+        - "CWE-94: Code Injection"
+        - "CWE-506: Embedded Malicious Code"
+      references:
+        - "https://attack.mitre.org/techniques/T1027/"
+        - "https://attack.mitre.org/techniques/T1140/"
+      description: "Detects extremely long Java strings that may contain Unicode tag characters or other advanced obfuscation techniques."
+      attack_vectors:
+        - "Unicode Tag Character obfuscation"
+        - "Invisible character steganography"
+        - "Advanced payload hiding"
+
+  - id: java-high-non-ascii-density
+    options:
+      symbolic_propagation: true
+    patterns:
+      - pattern-either:
+          - pattern: $VAR = $STR
+          - pattern: Base64.getDecoder().decode($STR)
+          - pattern: new String($STR, ...)
+          - pattern: URLDecoder.decode($STR, ...)
+      - metavariable-regex:
+          # Detects strings with high density of non-printable characters (likely encoded obfuscation)
+          regex: (?ms)^[\"].*([^\x20-\x7E\t\r\n].*){5,}[\"]$
+          metavariable: $STR
+    message: High non-ASCII character density detected - potential encoded obfuscated payload  
+    languages:
+      - java
+    severity: WARNING
+    metadata:
+      category: obfuscation
+      confidence: MEDIUM
+      impact: MEDIUM
+      description: "Detects Java strings with unusually high density of non-printable characters, which may indicate Unicode-encoded obfuscated payloads or binary data disguised as text."

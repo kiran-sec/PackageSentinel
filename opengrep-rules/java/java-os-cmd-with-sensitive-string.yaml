@@ -1,0 +1,27 @@
+rules:
+  - id: java-os-cmd-with-sensitive-string
+    languages:
+      - java
+    options:
+      symbolic_propagation: true
+    pattern-either:
+      - patterns:
+        - pattern-either:
+          - pattern: Runtime.getRuntime().exec("$CMD")
+          - pattern: Runtime.getRuntime().exec(new String[] {..., "$CMD", ...}, ...)
+        - metavariable-regex:
+            metavariable: $CMD
+            regex: .*(?i)(http://|//:ptth|687474703A2F2F|NB2HI4B2|D1Q78S1Q|aHR0cDov|BQS?8|XmoUN|uggc://|https://|//:sptth|68747470733A2F2F|NB2HI4DT|D1Q78S3J|aHR0cHM6|BQS?8F#ks-|XmoUNb2=\\|C|uggcf://|start|trats|7374617274|ON2GC4TU|EDQ62SJK|c3Rh|F*\\(i2|b97;H|fgneg|cmd|dmc|636D64|Y21k|pzq|cmd.exe|exe.dmc|636D642E657865|MNWWILTF|CDMM8BJ5|Y21kLmV4|@r5a/|V{K$E|pzq.rkr|net|ten|6E6574|bmV0|arg|powershell|llehsrewop|706F7765727368656C6C|OBXXOZLSONUGK3DM|E1NNEPBIEDK6AR3C|cG93ZXJzaGVs|E,Tr3EcYo*|aBp{Ia&u^9|cbjrefuryy|IEX\\(IWR|RWI\\(XEI|49455828495752|JFCVQKCJ|952LGA29|SUVYKElX|8OZ`0|Nkv#F|VRK\\(VJE|antonioCoco/ConPtyShell|llehSytPnoC/ocoCoinotna|616E746F6E696F436F636F2F436F6E5074795368656C6C|MFXHI33ONFXUG33DN4XUG33OKB2HSU3I|C5N78RRED5NK6RR3DSNK6RREA1Q7IKR8|YW50b25pb0NvY28vQ29uUHR5U2hl|@;^1*DJ=#VDe!\\]=6Z6j=FEpeu|VQzG9ZfS2rZ\\)0ySLvL<Sba_\\)~|nagbavbPbpb/PbaCglFuryy|awk|kwa|61776B|YXdr|njx|ncat|tacn|6E636174|bmNh|DI\\[*s|Zew9\\||apng|nc|cn|6E63|ap|nc -e|e- cn|6E63202D65|NZRSALLF|DPHI0BB5|bmMg|DIXe@|Zet\\)V|ap -r|-e /bin/|/nib/ e-|2D65202F62696E2F|FVSSAL3C|5LII0BR2|LWUgL2Jp|/S-%X@VK^5|EoC4tVrgzK|-r /ova/|sh|hs|7368|fu|sh -i|i- hs|7368202D69|ONUCALLJ|EDK20BB9|c2gg|F\\(c\\[J|b7&wf|fu -v|/bin/sh|hs/nib/|2F62696E2F7368|F5RGS3RP|5TH6IRHF|L2Jpbi9z|04JX5|FJftK|/ova/fu|bash|hsab|62617368|YmFz|@UX=k|VqtS=|onfu|bash -l|l- hsab|62617368202D6C|MJQXG2BA|C9GN6Q10|YmFzaCAt|@UX=k|VqtS=|onfu -y|/bin/bash|hsab/nib/|2F62696E2F62617368|F5RGS3RP|5TH6IRHF|L2Jpbi9iYXNo|04JX504J@2|FJftKFJfVH|/ova/onfu|base64|46esab|626173653634|MJQXGZJW|C9GN6P9M|YmFzZTY0|@UX=h|VqtS-|onfr64|/dev/tcp|pct/ved/|2F6465762F746370|F5SGK5RP|5TI6ATHF|L2Rldi90|04\\X;06C\\]C|FJxtQFLYyY|/qri/gpc|/inet/tcp/|/pct/teni/|2F696E65742F7463702F|F5UW4ZLUF52GG4BP|5TKMSPBK5TQ66S1F|L2luZXQvdGNw|055<8F>%`G|FKKRNbT4#c|/varg/gpc/|curl|lruc|6375726C|Y3Vy|@s\\)g.|V\\|8+D|phey).*
+    message: This package starts an OS process with a string literal that contains security-sensitive strings.
+    severity: INFO
+    metadata:
+      version: latest
+      confidence: LOW
+      description: "Detects execution of OS commands containing security-sensitive strings like network endpoints, shell commands, base64 encoded content, reverse shells, and other indicators of malicious activity"
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      references:
+        - https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Runtime.html#exec(java.lang.String%5B%5D,java.lang.String%5B%5D,java.io.File)
+      endor-attack-examples:
+        - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/mavencentral/com.github.codingandcoding:servlet-api/3.2.0

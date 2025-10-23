@@ -1,0 +1,47 @@
+rules:
+  - id: py-obfuscation-high-entropy
+    patterns:
+      - pattern-either:
+        # High-entropy string assignments
+        - pattern: $VAR = $STR
+        - pattern: $VAR = [$ITEMS, ..., $STR, ...]
+        - pattern: $DICT[$KEY] = $STR
+        - pattern: $OBJ.$ATTR = $STR
+        # Function calls with high-entropy strings
+        - pattern: $FUNC($STR)
+        - pattern: $FUNC(..., $STR, ...)
+        - pattern: $FUNC($STR, ...)
+        # List/dict literals with high-entropy strings
+        - pattern: [..., $STR, ...]
+        - pattern: {$KEY: $STR, ...}
+        # High-entropy strings in function definitions
+        - pattern: |
+            def $FUNC(...):
+                ...
+                $STR
+                ...
+      - metavariable-analysis:
+          analyzer: entropy
+          metavariable: $STR
+      - metavariable-regex:
+          # Match long strings with high entropy (covers b/f/u/r prefixes)
+          regex: (?ms)^(b|f|u|r|B|F|U|R)?['\"]{1,3}.{100,}['\"]{1,3}(\[[\d\-:]+\])?$
+          metavariable: $STR
+    message: High-entropy string with more than 100 characters detected - possible obfuscated code or encoded payload
+    languages:
+      - python
+    severity: WARNING
+    paths:
+      exclude:
+        - "**/site-packages/**"
+        - "**/dist-packages/**" 
+        - "**/__pycache__/**"
+        - "**/*.pyc"
+    metadata:
+      version: latest
+      endor-category: malware-detection
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      confidence: MEDIUM
+      malware-type: obfuscation
+      references:
+        - "https://owasp.org/www-community/attacks/Code_Injection"

@@ -1,0 +1,23 @@
+rules:
+  - id: java-url-classloader-invoke
+    languages:
+      - java
+    mode: taint
+    pattern-sources:
+      - pattern: $URLCL.getDeclaredMethod("addURL", ...)
+      - pattern: new URL("...")
+    pattern-sinks:
+      - pattern: $METH.invoke(...)
+    message: Hard-coded JAR URL added to URLClassLoader using reflection
+    severity: INFO
+    metadata:
+      version: latest
+      confidence: LOW
+      description: "Detects reflection-based addition of hard-coded JAR URLs to URLClassLoader, which can be used to dynamically load malicious code from external sources"
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      references:
+        - https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/net/URLClassLoader.html#addURL(java.net.URL)
+      endor-attack-examples:
+        - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/mavencentral/com.github.codingandcoding:maven-compiler-plugin/3.9.0

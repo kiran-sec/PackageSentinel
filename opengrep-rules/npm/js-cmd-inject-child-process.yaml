@@ -1,0 +1,48 @@
+rules:
+  - id: js-cmd-inject-child-process
+    options:
+      symbolic_propagation: true
+    patterns:
+      - pattern-either:
+        - pattern-inside: |
+            require('child_process').exec(...)
+        - pattern-inside: |
+            require('child_process').spawn(...)
+        - pattern-inside: |
+            require('child_process').execFile(...)
+        - pattern-inside: |
+            require('child_process').fork(...)
+        - pattern-inside: |
+            require('child_process').execSync(...)
+      - pattern-either:
+        - pattern: |
+            Buffer.from($STR).toString(...)
+        - pattern: |
+            new Uint8Array($STR).buffer
+        - pattern: |
+            new Int8Array($STR).buffer
+        - pattern: |
+            TextDecoder(...).decode($STR)
+      - metavariable-analysis:
+          analyzer: entropy
+          metavariable: $STR
+      - metavariable-regex:
+          regex: .{100,}
+          metavariable: $STR
+    message:  Observed arbitrary code execution of encoded strings with more than 100 characters length
+    metadata:
+      version: latest
+      confidence: HIGH
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      endor-attack-examples:
+        - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/npm/rate-map
+      references:
+        - https://www.npmjs.com/advisories/1083
+        - https://harry.garrood.me/blog/malicious-code-in-purescript-npm-installer/
+        - https://www.npmjs.com/advisories/1082
+      endor-category: malware-detection
+      endor-tags:
+        - ANALYTICS_IMPACT
+    languages:
+      - js
+    severity: ERROR

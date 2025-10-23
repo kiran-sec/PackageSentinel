@@ -1,0 +1,84 @@
+rules:
+  - id: vsix-clipboard-access
+    message: Detected clipboard access in VS Code extension - potential data theft
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    patterns:
+      - pattern-either:
+          - pattern: |
+              vscode.env.clipboard.readText()
+          - pattern: |
+              vscode.env.clipboard.writeText($DATA)
+          - pattern: |
+              clipboard.readText()
+          - pattern: |
+              clipboard.writeText($DATA)
+    metadata:
+      category: malware_pattern
+      confidence: MEDIUM
+      impact: MEDIUM
+      references:
+        - "https://code.visualstudio.com/api/references/vscode-api#Clipboard"
+      cwe:
+        - "CWE-200: Information Exposure"
+      technology:
+        - vscode
+        - extensions
+
+  - id: vsix-terminal-execution
+    message: Detected terminal command execution in VS Code extension - potential malicious behavior
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    patterns:
+      - pattern-either:
+          - pattern: |
+              vscode.window.createTerminal({..., shellPath: $CMD, ...})
+          - pattern: |
+              $TERMINAL.sendText($CMD)
+          - pattern: |
+              vscode.window.activeTerminal.sendText($CMD)
+          - pattern: |
+              vscode.tasks.executeTask($TASK)
+    metadata:
+      category: malware_pattern
+      confidence: HIGH
+      impact: HIGH
+      references:
+        - "https://code.visualstudio.com/api/references/vscode-api#Terminal"
+      cwe:
+        - "CWE-78: OS Command Injection"
+      technology:
+        - vscode
+        - extensions
+
+  - id: vsix-workspace-manipulation
+    message: Detected workspace manipulation in VS Code extension - potential persistence mechanism
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    patterns:
+      - pattern-either:
+          - pattern: |
+              vscode.workspace.getConfiguration().update($KEY, $VALUE, vscode.ConfigurationTarget.Global)
+          - pattern: |
+              vscode.workspace.getConfiguration().update($KEY, $VALUE, true)
+          - pattern: |
+              context.globalState.update($KEY, $VALUE)
+          - pattern: |
+              vscode.extensions.getExtension($ID).activate()
+    metadata:
+      category: supply_chain_risk
+      confidence: MEDIUM
+      impact: MEDIUM
+      references:
+        - "https://code.visualstudio.com/api/references/vscode-api#WorkspaceConfiguration"
+      cwe:
+        - "CWE-94: Code Injection"
+      technology:
+        - vscode
+        - extensions

@@ -1,0 +1,32 @@
+rules:
+  - id: py-unzip-literal
+    languages:
+      - python
+    mode: taint
+    pattern-sources:
+      - pattern: b'...'
+      # Using a base64 function with variable arguments is quite common in generic decompression functions, therefore check for string literal.
+      - pattern: base64.$FUNC('...', ...)
+      # The use of __import__('base64') is more suspicious, therefor search for any call (not only with string literals).
+      - pattern: __import__('base64').$FUNC(...)
+    pattern-sinks:
+      - pattern: zlib.decompress(...)
+      - pattern: lzma.decompress(...)
+      - pattern: bz2.decompress(...)
+      - pattern: __import__('zlib').decompress(...)
+      - pattern: __import__('lzma').decompress(...)
+      - pattern: __import__('bz2').decompress(...)
+    message: Decompression of byte literal or binary data coming from a decode function of the base64 module.
+    severity: WARNING
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      endor-attack-examples:
+        - https://jfrog.com/blog/pypi-malware-creators-are-starting-to-employ-anti-debug-techniques/
+        - https://docs.python.org/3/library/archiving.html
+        - https://www.bleepingcomputer.com/news/security/hundreds-of-malicious-python-packages-found-stealing-sensitive-data/
+      endor-tags:
+        - ANALYTICS_INFO

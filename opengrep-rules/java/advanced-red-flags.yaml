@@ -1,0 +1,290 @@
+rules:
+  - id: java-reflection-abuse
+    patterns:
+      - pattern-either:
+          # Dynamic class loading with reflection
+          - pattern: |
+              Class<?> $CLASS = Class.forName($CLASSNAME);
+              $CLASS.getDeclaredMethod($METHOD, ...).invoke($OBJ, ...)
+          # Private field/method access
+          - pattern: |
+              Field $FIELD = $CLASS.getDeclaredField($FIELDNAME);
+              $FIELD.setAccessible(true);
+              $FIELD.set($OBJ, $VALUE)
+          # Security manager bypass
+          - pattern: |
+              Method $METHOD = System.class.getDeclaredMethod("setSecurityManager", SecurityManager.class);
+              $METHOD.setAccessible(true);
+              $METHOD.invoke(null, null)
+          # ClassLoader manipulation
+          - pattern: |
+              Method $METHOD = ClassLoader.class.getDeclaredMethod("defineClass", ...);
+              $METHOD.setAccessible(true)
+      - metavariable-regex:
+          metavariable: $CLASSNAME
+          regex: (?i).*(runtime|process|security|system|classloader|unsafe).*
+    message: Reflection abuse detected - potential security bypass
+    languages: [java]
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: HIGH
+      description: "Detects abuse of Java reflection API to bypass security controls, access private members, manipulate security managers, or dynamically load malicious classes. Reflection abuse is commonly used by malware to circumvent Java security mechanisms, access restricted functionality, and execute malicious code with elevated privileges. This rule specifically targets Java environments and Maven packages."
+      attack_vectors:
+        - "Security manager bypass"
+        - "Private member access"
+        - "Dynamic class loading"
+        - "ClassLoader manipulation"
+      references:
+        - "https://attack.mitre.org/techniques/T1055/"
+        - "https://attack.mitre.org/techniques/T1211/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Security manager bypass"
+        - "Private member access"
+
+  - id: java-jni-exploitation
+    patterns:
+      - pattern-either:
+          # Native library loading
+          - pattern: |
+              System.loadLibrary($LIBNAME)
+          - pattern: |
+              System.load($LIBPATH)
+          # JNI method declarations
+          - pattern: |
+              public native $TYPE $METHOD(...)
+          # Unsafe operations
+          - pattern: |
+              sun.misc.Unsafe $UNSAFE = ...
+          - pattern: |
+              $UNSAFE.allocateMemory($SIZE)
+          - pattern: |
+              $UNSAFE.putAddress($ADDR, $VALUE)
+          # Runtime library manipulation
+          - pattern: |
+              Runtime.getRuntime().loadLibrary($LIB)
+      - metavariable-regex:
+          metavariable: $LIBNAME
+          regex: (?i).*(shell|cmd|exec|system|kernel|ntdll|kernel32).*
+    message: JNI exploitation detected - native code execution risk
+    languages: [java]
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: HIGH
+      description: "Detects Java Native Interface (JNI) exploitation patterns including suspicious native library loading, unsafe memory operations, and native method declarations. JNI abuse allows malware to execute native code, bypass Java security sandbox, perform direct memory manipulation, and access system resources outside of JVM control. This rule specifically targets Java environments and Maven packages."
+      attack_vectors:
+        - "Native library injection"
+        - "Memory corruption attacks"
+        - "Sandbox escape"
+        - "System library abuse"
+      references:
+        - "https://attack.mitre.org/techniques/T1055/"
+        - "https://attack.mitre.org/techniques/T1211/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Native library injection"
+        - "Memory corruption attacks"
+
+  - id: java-deserialization-attacks  
+    patterns:
+      - pattern-either:
+          # Unsafe deserialization
+          - pattern: |
+              ObjectInputStream $OIS = new ObjectInputStream($STREAM);
+              $OBJ = $OIS.readObject()
+          # Custom serialization with exec
+          - pattern: |
+              private void readObject(ObjectInputStream $OIS) throws ... {
+                  ...
+                  Runtime.getRuntime().exec($CMD);
+                  ...
+              }
+          # Gadget chain indicators
+          - pattern: |
+              import org.apache.commons.collections.functors.InvokerTransformer
+          - pattern: |
+              import org.apache.commons.collections.map.LazyMap
+          # Dynamic proxy for deserialization
+          - pattern: |
+              Proxy.newProxyInstance($LOADER, $INTERFACES, $HANDLER)
+          # RMI with deserialization
+          - pattern: |
+              Registry $REGISTRY = LocateRegistry.getRegistry($HOST, $PORT)
+    message: Deserialization attack detected - remote code execution risk  
+    languages: [java]
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: HIGH
+      description: "Detects Java deserialization attack patterns including unsafe object deserialization, malicious readObject implementations, gadget chain usage, and RMI exploitation. Deserialization attacks allow remote code execution by deserializing malicious objects that trigger code execution during the deserialization process. This rule specifically targets Java environments and Maven packages."
+      attack_vectors:
+        - "Unsafe object deserialization"
+        - "Gadget chain exploitation"
+        - "RMI attack vectors"
+        - "Custom readObject abuse"
+      references:
+        - "https://attack.mitre.org/techniques/T1203/"
+        - "https://owasp.org/www-project-top-ten/2017/A8_2017-Insecure_Deserialization"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Unsafe object deserialization"
+        - "Gadget chain exploitation"
+
+  - id: java-cryptographic-abuse
+    patterns:
+      - pattern-either:
+          # Weak cryptographic algorithms
+          - pattern: |
+              Cipher.getInstance("DES/...")
+          - pattern: |
+              Cipher.getInstance("MD5/...")
+          - pattern: |
+              MessageDigest.getInstance("MD5")
+          # Custom crypto implementations
+          - pattern: |
+              class $CLASS extends Cipher { ... }
+          - pattern: |
+              class $CLASS implements SecretKey { ... }
+          # Hardcoded cryptographic keys
+          - patterns:
+              - pattern: |
+                  byte[] $KEY = { $BYTES }
+              - metavariable-regex:
+                  metavariable: $BYTES
+                  regex: .*0x[0-9a-fA-F]{2,}.*
+          # Key generation with weak sources
+          - pattern: |
+              SecureRandom $RNG = new SecureRandom($SEED)
+          - pattern: |
+              KeyGenerator $KG = KeyGenerator.getInstance($ALGO);
+              $KG.init($WEAK_SIZE)
+      - metavariable-regex:
+          metavariable: $WEAK_SIZE
+          regex: ^(40|56|64|128)$
+    message: Cryptographic abuse detected - weak security implementation
+    languages: [java]
+    severity: WARNING
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      description: "Detects cryptographic abuse patterns including weak algorithms (DES, MD5), hardcoded keys, custom crypto implementations, and insufficient key sizes. These patterns indicate poor cryptographic practices that may be exploited by attackers or indicate malware attempting to use weak encryption for data hiding or communication obfuscation. This rule specifically targets Java environments and Maven packages."
+      attack_vectors:
+        - "Weak encryption algorithms"
+        - "Hardcoded cryptographic keys"
+        - "Custom crypto implementations"
+        - "Insufficient key sizes"
+      references:
+        - "https://attack.mitre.org/techniques/T1027/"
+        - "https://owasp.org/www-project-top-ten/2017/A3_2017-Sensitive_Data_Exposure"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Weak encryption algorithms"
+        - "Hardcoded cryptographic keys"
+
+  - id: java-privilege-escalation
+    patterns:
+      - pattern-either:
+          # Security policy manipulation
+          - pattern: |
+              System.setProperty("java.security.policy", $POLICY)
+          - pattern: |
+              Policy.setPolicy($CUSTOM_POLICY)
+          # Permission checks bypass
+          - pattern: |
+              AccessController.doPrivileged(new PrivilegedAction() { ... })
+          - pattern: |
+              AccessController.doPrivileged(new PrivilegedExceptionAction() { ... })
+          # Security manager manipulation
+          - pattern: |
+              SecurityManager $SM = System.getSecurityManager();
+              if ($SM == null) { ... }
+          # System property manipulation for privilege escalation
+          - patterns:
+              - pattern: |
+                  System.setProperty($PROP, $VALUE)
+              - metavariable-regex:
+                  metavariable: $PROP
+                  regex: (?i).*(security|policy|manager|permission|privilege).*
+    message: Privilege escalation attempt detected - security control bypass
+    languages: [java]
+    severity: ERROR
+    metadata:
+      version: latest
+      confidence: HIGH
+      description: "Detects privilege escalation attempts including security policy manipulation, privileged action execution, security manager bypass, and system property modifications. These techniques are used by malware to gain elevated privileges, bypass security controls, and access restricted system resources beyond normal application permissions. This rule specifically targets Java environments and Maven packages."
+      attack_vectors:
+        - "Security policy manipulation"
+        - "Privileged action abuse"
+        - "Security manager bypass"
+        - "System property tampering"
+      references:
+        - "https://attack.mitre.org/techniques/T1548/"
+        - "https://attack.mitre.org/techniques/T1211/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "Security policy manipulation"
+        - "Privileged action abuse"
+
+  - id: java-information-disclosure
+    patterns:
+      - pattern-either:
+          # System information gathering
+          - pattern: |
+              System.getProperty("user.name")
+          - pattern: |
+              System.getProperty("user.home")
+          - pattern: |
+              System.getProperty("os.name")
+          - pattern: |
+              System.getProperty("java.class.path")
+          # Network interface enumeration
+          - pattern: |
+              NetworkInterface.getNetworkInterfaces()
+          - pattern: |
+              InetAddress.getLocalHost()
+          # Environment variable access
+          - pattern: |
+              System.getenv($VAR)
+          - pattern: |
+              System.getenv()
+          # File system enumeration
+          - pattern: |
+              File $ROOT = new File("/");
+              $ROOT.listFiles()
+          - pattern: |
+              new File($PATH).exists()
+      - patterns:
+          - pattern-either:
+              - pattern: |
+                  String $INFO = System.getProperty($PROP)
+              - pattern: |
+                  String $INFO = System.getenv($VAR)
+          - pattern: |
+              $STREAM.write($INFO.getBytes())
+    message: Information disclosure detected - system profiling behavior
+    languages: [java]
+    severity: WARNING
+    metadata:
+      version: latest
+      confidence: MEDIUM
+      description: "Detects information disclosure patterns including system property access, environment variable enumeration, network interface discovery, and file system probing followed by data transmission. This behavior is commonly used by malware to profile victim systems, gather intelligence about the environment, and identify valuable targets for further exploitation. This rule specifically targets Java environments and Maven packages."
+      attack_vectors:
+        - "System property enumeration"
+        - "Environment variable access"
+        - "Network interface discovery"
+        - "File system probing"
+      references:
+        - "https://attack.mitre.org/techniques/T1082/"
+        - "https://attack.mitre.org/techniques/T1016/"
+      endor-category: malware-detection
+      endor-targets: [ENDOR_TARGET_PACKAGE]
+      malware_techniques:
+        - "System property enumeration"
+        - "Environment variable access"

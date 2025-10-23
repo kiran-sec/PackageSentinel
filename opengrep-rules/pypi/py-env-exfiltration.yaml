@@ -1,0 +1,60 @@
+rules:
+  - id: py-env-exfiltration
+    mode: taint
+    options:
+      symbolic_propagation: true
+    pattern-sources:
+      ### From py-read-env
+      - pattern: os.confstr(...) # Return string-valued system configuration values. To be discussed...
+      - pattern: os.sysconf(...) # Return integer-valued system configuration values. To be discussed...
+      - pattern: os.environ
+      - pattern: os.environb
+      - pattern: os.getenv(...)
+      - pattern: os.getenvb(...)
+      - pattern: os.getlogin()
+      - pattern: os.uname()
+      - pattern: socket.gethostname()
+      - pattern: socket.gethostbyname_ex(...)
+      - pattern: platform.$FUNC(...)
+      - pattern: winreg.$FUNC(...)
+    pattern-sinks:
+      # Well-known libraries
+      - pattern: requests.$METH(...)
+      - pattern: urllib2.urlopen(...)
+      - pattern: six.moves.urllib.request.urlopen(...)
+
+      ### From py-network
+      # Python 2
+      - pattern: urllib.urlopen(...)
+      - pattern: urllib.urlretrieve(...)
+      # Python 3
+      - pattern: urllib.request.urlopen(...)
+      # $OP.open(...) alone is triggered by too many open()n functions, e.g., pathlib.Path.open() or io.open()
+      - pattern: |
+          $OP = urllib.request.build_opener(...)
+          ...
+          with $OP.open(...) as $FD:
+            ...
+      # Handlers (normally called through OpenerDirectors)
+      - pattern: $HDL.http_open(...)
+      - pattern: $HDL.https_open(...)
+      - pattern: $HDL.ftp_open(...)
+      - pattern: urllib.request.urlretrieve(...)
+
+      ### From datadog.exfiltrate-sensitive-data
+      - patterns:
+        - pattern-inside: $S = socket.socket(...); ...
+        - pattern-inside: $S.connect(...); ...
+        - pattern-inside: $S.send(...)
+    message: Environment information like host and user name or environment variables flows into network APIs.
+    languages:
+      - python
+    severity: INFO
+    metadata:
+      version: latest
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      confidence: LOW
+      endor-attack-examples:
+        - https://medium.com/checkmarx-security/first-known-phishing-attack-against-pypi-contributor-95db34548868

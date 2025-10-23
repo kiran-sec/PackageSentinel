@@ -1,0 +1,61 @@
+# Comments
+# - If too noisy, maybe add: pattern-inside $RESP.on('end', function()
+rules:
+  - id: js-dropper-execute
+    languages:
+      - js
+    message: Execution of OS process in callback of http calls, which could indicate the download and execution of droppers
+    options:
+      symbolic_propagation: true
+    patterns:
+      - pattern-either:
+        - pattern-inside: |
+            http.$FUN(...)
+        - pattern-inside: |
+            http.request(...)
+        - pattern-inside: |
+            https.$FUN(...)
+        - pattern-inside: |
+            https.request(...)
+        - pattern-inside: |
+            fetch(...)
+        - pattern-inside: |
+            axios.$FUN(...)
+      - patterns:
+        # Commented, because chmod and decoding is not required
+        # - pattern: |
+        #             fs.chmod(...)...
+        # - pattern: |
+        #             ...
+        #             new Buffer(..., '$CMD').toString()
+        #             ...
+        - pattern-either:
+          - pattern: |
+              child_process.exec(...) 
+              ...
+          - pattern: |
+              child_process.execFile(...)
+              ...
+          - pattern: |
+              child_process.fork(...)
+              ...
+          - pattern: |
+              child_process.spawn(...) 
+              ...
+      # - metavariable-regex:
+      #       metavariable: $CMD
+      #       regex: .*(?i)\b(base64|hex|base64url)\b.*
+    metadata:
+      version: latest
+      endor-attack-examples:
+      - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/npm/http-proxy-middelware/2.9.0
+      - https://blog.phylum.io/sophisticated-ongoing-attack-discovered-on-npm/
+      references:
+      - https://nodejs.org/api/buffer.html#buffers-and-character-encodings
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      endor-tags:
+        - ANALYTICS_INFO
+      confidence: MEDIUM
+    severity: WARNING

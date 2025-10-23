@@ -1,0 +1,39 @@
+rules:
+  - id: js-getcookies-index-backdoor
+    options:
+      symbolic_propagation: true
+    patterns:
+    - pattern-either:
+      - pattern-either:
+        - pattern: |
+                        if(secrets.length !== 0)
+                        {
+                          req.signedCookies = signedCookies(req.cookies, secrets)
+                          req.signedCookies = JSONCookies(req.signedCookies)
+                        }
+        - pattern: req.cookies = JSONCookies(req.cookies)
+      - pattern-inside: |
+                    function $FUN(...) {
+                      return function $FUN(req, res, next) {
+                        ...
+                        }
+                      }
+      - pattern: |
+                         function JSONCookie($X)
+                         {
+                           if (typeof $X !== 'string' || str.substr(0, 2) !== 'j:')
+                           ...
+                         }
+    message: Observed malicious pattern that could impact express-cookies or getcookies packages.
+    metadata:
+      version: latest
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      endor-attack-examples:
+        - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/npm/getcookies
+      references:
+        - https://blog.npmjs.org/post/173526807575/reported-malicious-module-getcookies
+      endor-category: malware-detection
+      confidence: LOW
+    languages:
+      - js
+    severity: INFO

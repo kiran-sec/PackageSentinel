@@ -1,0 +1,148 @@
+rules:
+  - id: child-process-usage
+    patterns:
+      - pattern-either:
+          - pattern: |
+              require('child_process')
+          - pattern: |
+              require("child_process") 
+          - pattern: |
+              const { $...VARS } = require('child_process')
+          - pattern: |
+              const { $...VARS } = require("child_process")
+          - pattern: |
+              import { $...VARS } from 'child_process'
+          - pattern: |
+              import $VAR from 'child_process'
+    message: Detected child_process module usage - potential code execution risk
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      category: security
+      subcategory: execution
+      confidence: MEDIUM
+      impact: HIGH
+      technology: [npm, javascript]
+      references:
+        - https://nodejs.org/api/child_process.html
+      cwe: "CWE-78: OS Command Injection"
+
+  - id: exec-spawn-usage
+    patterns:
+      - pattern-either:
+          - pattern: |
+              exec($CMD, ...)
+          - pattern: |
+              spawn($CMD, ...)
+          - pattern: |
+              execSync($CMD, ...)
+          - pattern: |
+              spawnSync($CMD, ...)
+          - pattern: |
+              $VAR.exec($CMD, ...)
+          - pattern: |
+              $VAR.spawn($CMD, ...)
+    message: Detected exec/spawn function usage - potential command injection
+    languages: [javascript, typescript] 
+    severity: WARNING
+    metadata:
+      category: security
+      subcategory: execution
+      confidence: HIGH
+      impact: HIGH
+      technology: [npm, javascript]
+      references:
+        - https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback
+      cwe: "CWE-78: OS Command Injection"
+
+  - id: eval-function-usage
+    patterns:
+      - pattern-either:
+          - pattern: |
+              eval($CODE)
+          - pattern: |
+              Function($CODE)
+          - pattern: |
+              new Function($CODE)
+    message: Detected dynamic code execution via eval/Function - security risk
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      category: security
+      subcategory: execution
+      confidence: HIGH
+      impact: CRITICAL
+      technology: [npm, javascript] 
+      references:
+        - https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval
+      cwe: "CWE-95: Code Injection"
+
+  - id: network-modules-usage
+    patterns:
+      - pattern-either:
+          # Variable declarations (most specific first)
+          - pattern: |
+              const $VAR = require('net')
+          - pattern: |
+              const $VAR = require('http')
+          - pattern: |
+              const $VAR = require('https')
+          - pattern: |
+              let $VAR = require('net')
+          - pattern: |
+              let $VAR = require('http')
+          - pattern: |
+              let $VAR = require('https')
+          - pattern: |
+              var $VAR = require('net')
+          - pattern: |
+              var $VAR = require('http')
+          - pattern: |
+              var $VAR = require('https')
+          # Destructuring assignments
+          - pattern: |
+              const { $...FUNCS } = require('net')
+          - pattern: |
+              const { $...FUNCS } = require('http')
+          - pattern: |
+              const { $...FUNCS } = require('https')
+          # Import statements
+          - pattern: |
+              import $VAR from 'net'
+          - pattern: |
+              import $VAR from 'http'
+          - pattern: |
+              import $VAR from 'https'
+          - pattern: |
+              import { $...FUNCS } from 'net'
+          - pattern: |
+              import { $...FUNCS } from 'http'
+          - pattern: |
+              import { $...FUNCS } from 'https'
+          # Dynamic requires (least specific, only if not caught above)
+          - patterns:
+              - pattern-either:
+                  - pattern: require('net')
+                  - pattern: require("net")
+                  - pattern: require('http')
+                  - pattern: require("http")
+                  - pattern: require('https')
+                  - pattern: require("https")
+              - pattern-not-inside: |
+                  const $VAR = $REQUIRE
+              - pattern-not-inside: |
+                  let $VAR = $REQUIRE
+              - pattern-not-inside: |
+                  var $VAR = $REQUIRE
+    message: Detected network module usage - potential network communication
+    languages: [javascript, typescript]
+    severity: INFO
+    metadata:
+      category: security
+      subcategory: network
+      confidence: MEDIUM
+      impact: MEDIUM
+      technology: [npm, javascript]
+      references:
+        - https://nodejs.org/api/net.html
+      cwe: "CWE-506: Embedded Malicious Code"

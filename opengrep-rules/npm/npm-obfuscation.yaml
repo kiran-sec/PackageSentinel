@@ -1,0 +1,59 @@
+rules:
+- id: npm-obfuscation
+  languages:
+  - javascript
+  message: This package is using a common obfuscation method often used by malware
+  metadata:
+    confidence: LOW
+    description: Identify when a package uses a common obfuscation method often used
+      by malware
+    endor-category: malware-detection
+    endor-tags:
+    - SEMGREP_IGNORE
+    endor-targets:
+    - ENDOR_TARGET_PACKAGE
+    version: latest
+  patterns:
+  - pattern-either:
+    - pattern: while (!![]) { ... }
+    - pattern: for (var $VAR = +!!false; ...; $VAR++) { ... }
+    - pattern: global[Buffer.from(...)]
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '$FN=$DEOB
+
+            ...
+
+            '
+        - pattern-inside: "function $FN(...) { \n  ...\n  $DEOB\n  ...\n}\n...\n"
+      - metavariable-pattern:
+          metavariable: $DEOB
+          pattern: String.fromCharCode
+      - pattern-either:
+        - pattern: $FN("...")
+    - pattern-regex: function _0x[a-zA-Z0-9\s]*\(
+    - patterns:
+      - pattern: function (..., $HEXVAR, ...) { ... }
+      - metavariable-regex:
+          metavariable: $HEXVAR
+          regex: ^_0x[a-zA-Z0-9]+$
+    - patterns:
+      - pattern-inside: function $FN(){var $ARR=[...];$FN=function(){return $ARR;};return
+          $FN();}
+      - pattern: $PARAM
+      - metavariable-analysis:
+          analyzer: entropy
+          metavariable: $PARAM
+    - patterns:
+      - pattern-not-inside: '...'
+      - pattern-not-inside: /*...*/
+      - pattern-not-inside: //...
+      - pattern-regex: ^\s*[\[\]\(\)\+\!]{10,}\s*$
+    - patterns:
+      - pattern: '...'
+      - pattern-not-inside: /*...*/
+      - pattern-not-inside: //...
+      - pattern-regex: ^(.*?);?[\h]{150,};?.{10,}$
+    - pattern: "eval(function(...){ \n...\n$VAR.replace(new RegExp(...),...)\n...\
+        \ \n}(...))\n"
+  severity: INFO

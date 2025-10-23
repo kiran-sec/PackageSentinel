@@ -1,0 +1,22 @@
+rules:
+  - id: java-os-cmd-with-literal
+    languages:
+      - java
+    options:
+      symbolic_propagation: true
+    pattern-either:
+      - pattern: Runtime.getRuntime().exec("...")
+      - pattern: Runtime.getRuntime().exec(new String[] {..., "...", ...}, ...)
+    message: String literal(s) passed to Runtime.exec(String) or Runtime.exec(String[])
+    severity: INFO
+    metadata:
+      version: latest
+      confidence: LOW
+      description: "Detects direct execution of OS commands using Runtime.exec() with string literals, which may indicate suspicious command execution"
+      endor-targets:
+        - ENDOR_TARGET_PACKAGE
+      endor-category: malware-detection
+      references:
+        - https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Runtime.html#exec(java.lang.String%5B%5D,java.lang.String%5B%5D,java.io.File)
+      endor-attack-examples:
+        - https://github.com/cybertier/Backstabbers-Knife-Collection/tree/master/samples/mavencentral/com.github.codingandcoding:servlet-api/3.2.0

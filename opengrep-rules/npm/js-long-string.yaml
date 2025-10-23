@@ -1,0 +1,42 @@
+rules:
+  - id: js-long-string
+    options:
+      symbolic_propagation: true
+    patterns:
+      - pattern-either:
+          - pattern: $VAR = $STR
+          - pattern: $VAR = [..., $STR, ...]
+          - pattern: $FUNC(..., $STR, ...)
+          - pattern: $FUNC(..., [..., $STR, ...], ...)
+          - pattern: |
+              {..., $KEY: $STR, ...}
+      - metavariable-regex:
+          regex: (?ms)^(b|f|u|r|B|F|U|R)?[\'\"].{1000,}[\'\"]$
+          metavariable: $STR
+    message: Long string with more than 1000 chars detected - potential obfuscated payload
+    languages:
+      - javascript
+      - typescript
+    severity: WARNING
+    paths:
+      exclude:
+        - "**/package-lock.json"
+    metadata:
+      version: latest
+      endor-category: malware-detection
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      endor-tags:
+        - SEMGREP_IGNORE
+      confidence: LOW
+      description: "Detects extremely long strings (>1000 characters) that may contain obfuscated code, encoded payloads, embedded scripts, or large data blobs used to hide malicious functionality. Long strings are commonly used in malware to store base64-encoded executables, configuration data, or obfuscated commands. This rule specifically targets JavaScript/Node.js environments and npm packages."
+      attack_vectors:
+        - "Base64-encoded executable payloads"
+        - "Obfuscated malicious scripts"
+        - "Embedded configuration data"
+        - "Large encoded command strings"
+      references:
+        - "https://attack.mitre.org/techniques/T1027/"
+        - "https://attack.mitre.org/techniques/T1140/"
+      malware_techniques:
+        - "Base64-encoded executable payloads"
+        - "Obfuscated malicious scripts"

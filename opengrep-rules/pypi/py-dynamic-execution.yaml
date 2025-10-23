@@ -1,0 +1,54 @@
+rules:
+  - id: py-dynamic-execution
+    patterns:
+      - pattern-either:
+        # Direct eval and exec usage
+        - pattern: eval($CODE)
+        - pattern: exec($CODE)
+        - pattern: compile($CODE, $FILENAME, $MODE)
+        # Dynamic import
+        - pattern: __import__($MODULE)
+        - pattern: importlib.import_module($MODULE)
+        - pattern: importlib.__import__($MODULE)
+        # Code object execution
+        - pattern: exec(compile($CODE, ...), ...)
+        - pattern: eval(compile($CODE, ...), ...)
+        # Dynamic attribute access that could execute code
+        - pattern: getattr($OBJ, $ATTR)($ARGS)
+        - pattern: setattr($OBJ, $ATTR, $VALUE)
+        # Dynamic function calls
+        - pattern: globals()[$FUNC]($ARGS)
+        - pattern: locals()[$FUNC]($ARGS)
+        # Subprocess with shell=True and dynamic commands
+        - pattern: subprocess.call($CMD, shell=True)
+        - pattern: subprocess.run($CMD, shell=True)
+        - pattern: subprocess.Popen($CMD, shell=True)
+        - pattern: os.system($CMD)
+        - pattern: os.popen($CMD)
+      - metavariable-regex:
+          # Match variable/computed code, not string literals
+          regex: ^(?![\"\']).+$
+          metavariable: $CODE
+      - metavariable-regex:
+          # Match variable module names, not literals
+          regex: ^(?![\"\']).+$
+          metavariable: $MODULE
+      - metavariable-regex:
+          # Match variable commands, not literals
+          regex: ^(?![\"\']).+$
+          metavariable: $CMD
+    message: Dynamic code execution detected - eval(), exec(), or dynamic import with variable input
+    languages:
+      - python
+    severity: ERROR
+    metadata:
+      version: latest
+      endor-category: malware-detection
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      confidence: HIGH
+      malware-type: code-injection
+      cwe: "CWE-94: Improper Control of Generation of Code"
+      references:
+        - "https://owasp.org/www-community/attacks/Code_Injection"
+        - "https://docs.python.org/3/library/functions.html#eval"
+        - "https://bandit.readthedocs.io/en/latest/plugins/b102_exec_used.html"

@@ -1,0 +1,102 @@
+rules:
+  - id: py-supply-chain-indicators
+    patterns:
+      - pattern-either:
+        # Setup.py manipulation in runtime
+        - pattern: |
+            with open('setup.py', 'w') as f:
+                f.write($MALICIOUS_SETUP)
+        - pattern: |
+            exec(open('setup.py').read())
+        # Requirements manipulation
+        - pattern: |
+            with open('requirements.txt', 'a') as f:
+                f.write($MALICIOUS_REQUIREMENT)
+        # Wheel manipulation
+        - pattern: |
+            import wheel
+            ...
+            wheel.install($MALICIOUS_WHEEL)
+        # PyPI registry manipulation
+        - pattern: |
+            os.environ['PIP_INDEX_URL'] = $MALICIOUS_INDEX
+        - pattern: |
+            os.environ['PIP_EXTRA_INDEX_URL'] = $MALICIOUS_INDEX
+        # Package installation abuse
+        - pattern: |
+            subprocess.call(['pip', 'install', $MALICIOUS_PACKAGE])
+        - pattern: |
+            subprocess.call(['pip', 'install', '--force-reinstall', $PACKAGE])
+        # Dependency confusion
+        - pattern: |
+            import $INTERNAL_PACKAGE
+        - pattern: |
+            from $INTERNAL_PACKAGE import $MODULE
+        # Typosquatting patterns
+        - pattern: |
+            import $TYPO_PACKAGE
+        - pattern: |
+            __import__($TYPO_PACKAGE)
+        # Package metadata manipulation
+        - pattern: |
+            with open('PKG-INFO', 'w') as f:
+                f.write($MALICIOUS_METADATA)
+        - pattern: |
+            with open('METADATA', 'w') as f:
+                f.write($MALICIOUS_METADATA)
+        # Distribution manipulation
+        - pattern: |
+            import setuptools
+            ...
+            setuptools.setup(
+                ...,
+                install_requires=[$MALICIOUS_DEPS],
+                ...
+            )
+        # PyPI upload abuse
+        - pattern: |
+            subprocess.call(['twine', 'upload', $MALICIOUS_DIST])
+        - pattern: |
+            subprocess.call(['python', 'setup.py', 'sdist', 'upload'])
+        # Site-packages installation
+        - pattern: |
+            import site
+            ...
+            shutil.copy($MALICIOUS_FILE, site.getsitepackages()[0])
+        # Pip configuration manipulation
+        - pattern: |
+            with open(os.path.expanduser('~/.pip/pip.conf'), 'w') as f:
+                f.write($MALICIOUS_CONFIG)
+        # Poetry/pipenv manipulation
+        - pattern: |
+            with open('pyproject.toml', 'w') as f:
+                f.write($MALICIOUS_TOML)
+        - pattern: |
+            with open('Pipfile', 'w') as f:
+                f.write($MALICIOUS_PIPFILE)
+      - metavariable-regex:
+          regex: (?i).*(reqeusts|pillow-|numpy-|pandas-|tensorflow-|pytorch-|sklearn-|scipy-|flask-|django-|requests-|urllib3-).*
+          metavariable: $TYPO_PACKAGE
+      - metavariable-regex:
+          regex: (?i).*(?!pypi\.org|pypi\.python\.org).*
+          metavariable: $MALICIOUS_INDEX
+      - metavariable-regex:
+          regex: (?i).*(internal|private|company|corp|org).*
+          metavariable: $INTERNAL_PACKAGE
+      - metavariable-regex:
+          regex: (?i).*(malicious|evil|backdoor|trojan|virus).*
+          metavariable: $MALICIOUS_PACKAGE
+    message: Python supply chain attack indicators detected - potential package compromise
+    languages:
+      - python
+    severity: CRITICAL
+    metadata:
+      version: latest
+      endor-category: malware-detection
+      endor-targets: [ ENDOR_TARGET_PACKAGE ]
+      confidence: MEDIUM
+      malware-type: supply-chain
+      attack-vector: dependency-confusion
+      references:
+        - "https://attack.mitre.org/techniques/T1195/"
+        - "https://blog.sonatype.com/dependency-confusion-attack-against-python-pypi"
