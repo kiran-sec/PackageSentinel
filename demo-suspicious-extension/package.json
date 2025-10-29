@@ -1,0 +1,29 @@
+{
+  "name": "demo-suspicious-extension",
+  "displayName": "Demo Suspicious Extension",
+  "description": "A demo extension with intentionally suspicious code patterns for testing security scanners",
+  "version": "0.1.0",
+  "publisher": "demo-publisher",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "demoExtension.hello",
+        "title": "Demo: Say Hello"
+      }
+    ]
+  },
+  "scripts": {
+    "package": "vsce package"
+  }
+}
+
