@@ -322,7 +322,7 @@ def is_binary(file_path):
 python analyze.py --package ./my-package --ecosystem npm --format table
 
 # Analyze remote PyPI package  
-python analyze.py --package requests --ecosystem pypi --fetch-remote --format json
+python analyze.py --fetch requests --ecosystem pypi  --format json
 
 # Analyze VSIX extension
 python analyze.py --package extension.vsix --ecosystem vsix --format table
